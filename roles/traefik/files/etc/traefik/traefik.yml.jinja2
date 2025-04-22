@@ -1,0 +1,45 @@
+entryPoints:
+  web:
+    address: ":80"
+    forwardedHeaders:
+      trustedIPs:
+        - "127.0.0.1/32"
+        - "{{ vpc_cidr }}"
+  metrics:
+    address: ":9180"
+
+  ping:
+    address: ":8082"
+
+providers:
+  swarm:
+    endpoint: "unix:///var/run/docker.sock"
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+log:
+  level: "DEBUG"
+  filePath: "/var/log/traefik/traefik.log"
+  format: "json"
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: "json"
+  fields:
+    defaultMode: "keep"
+    headers:
+      defaultMode: "keep"
+api:
+  debug: true
+  dashboard: true
+  insecure: true
+http:
+  routers:
+    dashboard:
+      rule: Host(`traefik.{{ platform_env }}.{{ internal_domain }}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      service: api@internal      
+
+metrics:
+  addInternals: true
+
+ping:
+  entryPoint: "ping"

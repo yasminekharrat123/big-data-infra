@@ -1,0 +1,41 @@
+---
+- name: "[DOCKER] - add docker repo key"
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/trusted.gpg.d/docker.asc
+    mode: '0644'
+  become: true
+
+- name: "[DOCKER] - add repository"
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: false
+  become: true
+
+- name: "[DOCKER] - update apt cache"
+  apt:
+    update_cache: true
+  become: true
+
+
+- name: "[DOCKER] - install dependencies"
+  apt:
+    name: "{{ docker_packages }}"
+    state: present
+  become: true
+
+- name: "[DOCKER] enable docker service"
+  systemd:
+    name: docker.service
+    state: started
+    enabled: true
+  become: true
+
+- name: "[DOCKER] - docker login"
+  community.docker.docker_login:
+    username: "{{ docker_registry_credentials.username }}"
+    password: "{{ docker_registry_credentials.password }}"
+    registry_url: "{{ docker_registry_credentials.url }}"
+  become: true
+

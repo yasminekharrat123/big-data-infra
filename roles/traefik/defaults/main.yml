@@ -1,0 +1,8 @@
+---
+traefik_path: /opt/infra/traefik
+traefik_logs_path: /var/log/traefik
+traefik_version: 3.3.5
+traefik_config_dir: /etc/traefik
+traefik_net:
+  internal_port: 8081
+

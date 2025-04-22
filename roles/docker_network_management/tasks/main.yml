@@ -1,0 +1,41 @@
+# Check if docker_gwbridge network exists
+- name: "Check if docker_gwbridge network exists"
+  community.docker.docker_network_info:
+    name: docker_gwbridge
+  register: gwbridge_network_info
+  ignore_errors: true
+  become: true
+
+# Disconnect all containers from docker_gwbridge if it exists
+- name: "Disconnect containers from docker_gwbridge network"
+  community.docker.docker_network:
+    name: docker_gwbridge
+    connected: []
+  when: gwbridge_network_info.networks is defined and gwbridge_network_info.networks | length > 0
+  ignore_errors: true
+  become: true
+
+# Remove existing docker_gwbridge (if any)
+- name: "Remove existing docker_gwbridge network"
+  community.docker.docker_network:
+    name: docker_gwbridge
+    state: absent
+  when: gwbridge_network_info.networks is defined and gwbridge_network_info.networks | length > 0
+  ignore_errors: true
+  become: true
+
+# Create custom docker_gwbridge network
+- name: "Create custom docker_gwbridge network"
+  community.docker.docker_network:
+    name: docker_gwbridge
+    driver: bridge
+    ipam_config:
+      - subnet: "{{ docker_gwbridge_subnet }}"
+        gateway: "{{ docker_gwbridge_gateway }}"
+    driver_options:
+      com.docker.network.bridge.name: docker_gwbridge
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+  notify: Restart Docker
+  become: true
+

@@ -1,0 +1,14 @@
+---
+docker_packages:
+  - docker-ce 
+  - docker-ce-cli 
+  - containerd.io 
+  - docker-buildx-plugin 
+  - docker-compose-plugin
+  - python3-docker
+  - python3-jsondiff
+
+docker_registry_credentials:
+  password:  "{{ lookup('env', 'DOCKER_REGISTRY_PASSWORD')}}"
+  username: "{{ lookup('env', 'DOCKER_REGISTRY_USER')}}"
+  url: "{{ lookup('env', 'DOCKER_REGISTRY') }}"

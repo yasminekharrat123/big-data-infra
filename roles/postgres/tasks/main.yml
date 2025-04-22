@@ -1,0 +1,28 @@
+---
+# tasks file for postgres
+- name: "[POSTGRES] - update cache"
+  apt:
+    update_cache: true
+  become: true
+
+- name: "[POSTGRES] - install packages"
+  apt:
+    name: "{{ postgres_packages }}"
+    state: present
+  become: true
+
+- name: "[POSTGRES] Configure listen address"
+  lineinfile:
+    line: "listen_addresses = '*'"
+    path: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+  delegate_to: "{{ groups['database'][0] }}"
+  become: true
+  when: vpc_cidr is defined
+  notify: "[POSTGRES] - restart postgres"
+
+- name: "[POSTGRES] - start service"
+  service:
+    name: postgresql
+    state: started
+  become: true
+  

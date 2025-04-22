@@ -1,0 +1,14 @@
+---
+- name: "[POSTGRES] - reload postgres"
+  service:
+    name: postgresql
+    state: reloaded
+  become: yes
+  delegate_to: "{{ groups['database'][0] }}"
+
+- name: "[POSTGRES] - restart postgres"
+  service:
+    name: postgresql
+    state: restarted
+  become: yes
+  delegate_to: "{{ groups['database'][0] }}"

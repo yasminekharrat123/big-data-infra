@@ -1,0 +1,12 @@
+---
+base_packages:
+  - git
+  - curl
+  - wget
+  - autoconf
+  - automake
+  - pkg-config
+  - libtool
+  - libpq-dev
+  - unzip
+  - acl

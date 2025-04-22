@@ -1,0 +1,9 @@
+---
+
+postgres_packages:
+  - postgresql
+  - python3-psycopg2
+
+postgres_net:
+    port: "{{ postgres_port | default('5432') }}"
+    host: "{{ groups['database'][0] | default('localhost') }}"

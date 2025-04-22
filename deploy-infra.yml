@@ -1,0 +1,92 @@
+- name: "common role"
+  hosts: all
+  roles:
+    - base
+  tags:
+    - base-tasks
+
+- name: "deploy postgres"
+  hosts: database
+  roles:
+    - postgres
+  tags:
+    - database
+
+- name: "Set docker swarm manager node IP"
+  hosts: all
+  tasks:
+    - set_fact:
+        swarm_master_ip: "{{ item }}"
+      when: hostvars[item].swarm_master | default(false) == true
+      with_items: "{{ groups['services'] }}"
+      run_once: true
+    
+  tags:
+    - docker-install
+    - swarm-manager
+    - deploy-webserver
+    - deploy-monitoring
+    - deploy-exporters
+    - deploy-app
+
+- name: "deploy docker"
+  hosts: 
+    - services
+    - monitoring
+  handlers:
+  - name: "Restart Docker"
+    import_tasks: "roles/docker/handlers/main.yml"
+  roles:
+    - role: docker
+    - role: docker_network_management
+      when: platform_env == "local" 
+  tags:
+    - deploy-docker
+    - deploy-app
+
+- name: "deploy swarm"
+  hosts: services
+  roles:
+    - role: docker-swarm
+      when: swarm_master == true
+  tags: 
+    - swarm-manager
+  
+- name: "deploy webserver"
+  serial: 1
+  hosts:
+    - services
+    - monitoring
+  roles:
+    - traefik
+  tags:
+    - deploy-webserver
+
+- name: "deploy platform"
+  hosts:
+    - services
+  handlers:
+    - name: postgres handlers 
+      import_tasks: "roles/postgres/handlers/main.yml"
+  roles:
+    - app
+  tags:
+     - deploy-app
+
+# - name: "deploy monitoring"
+#   hosts:
+#     - monitoring
+#   roles:
+#     - monitoring
+#   tags:
+#     - deploy-monitoring
+
+# - name: "deploy exporters"
+#   hosts: all
+#   handlers:
+#     - import_tasks: "roles/postgres/handlers/main.yml"
+#   roles:
+#     - exporters
+#   tags:
+#     - deploy-monitoring
+#     - deploy-exporters

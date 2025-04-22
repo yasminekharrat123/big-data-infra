@@ -1,0 +1,38 @@
+---
+- name: "[DOCKER-SWARM] - init docker swarm"
+  community.docker.docker_swarm:
+    state: present
+    advertise_addr: "{{ swarm_master_ip }}:{{swarm_port}}"
+  become: true
+  register: swarm_init
+
+- name: "[DOCKER-SWARM] - Store Join Token"
+  set_fact:
+    swarm_join_token: "{{ swarm_init['swarm_facts'] }}"
+
+- name: "[DOCKER-SWARM] - Join Node Swarm"
+  community.docker.docker_swarm:
+    state: join
+    remote_addrs: ["{{ swarm_master_ip }}:{{swarm_port}}"]
+    join_token: "{{ swarm_join_token['JoinTokens']['Worker'] }}"
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  become: true
+  when: 
+    - hostvars[item].swarm_master == false
+    - hostvars[item].swarm_manager == false
+  with_items: "{{ groups['services'] }}"
+
+- name: "[DOCKER-SWARM] - Join Manager Swarm"
+  community.docker.docker_swarm:
+    state: join
+    remote_addrs: ["{{ swarm_master_ip }}:{{swarm_port}}"]
+    join_token: "{{ swarm_join_token['JoinTokens']['Manager'] }}"
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  become: true
+  when: 
+    - hostvars[item].swarm_master == false
+    - hostvars[item].swarm_manager == true
+  with_items: "{{ groups['services'] }}"
+

@@ -1,0 +1,44 @@
+---
+# tasks file for traefik
+- name: "[TRAEFIK] create config "
+  file:
+    path: "/etc/traefik"
+    state: directory
+    owner: "{{ platform_user }}"
+    group: "{{ platform_user }}"
+  become: true
+
+- name: "[DOCKER-SWARM] - create public traefik network"
+  community.docker.docker_network:
+    name: "traefik-network"
+    driver: "overlay"
+    attachable: true
+  become: true
+
+- name: "[TRAEFIK] - config"
+  template:
+    src: "{{ role_path }}/files/etc/traefik/traefik.yml.jinja2"
+    dest: /etc/traefik/traefik.yml
+  become: true
+
+- name: "[TRAEFIK run]"
+  community.docker.docker_container:
+    name: traefik
+    image: traefik:v{{ traefik_version }}
+    command: traefik --configFile=/etc/traefik/traefik.yml
+    state: started
+    restart_policy: always
+    # log_driver: fluentd
+    # TODO: configure
+   ports:
+      - "80:80"
+      - "9180:9180"
+      - "8082:8082"
+      - "{{ traefik_net.internal_port }}:8080"
+    volumes:
+      - "/etc/traefik:/etc/traefik"
+      - "/var/log/traefik:/var/log/traefik"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - name: traefik-network
+  become: true

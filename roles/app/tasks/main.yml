@@ -1,0 +1,4 @@
+---
+- include_tasks: "configure-db.yml"
+  run_once: true
+- include_tasks: "deploy-app.yml" 

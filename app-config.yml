@@ -1,0 +1,27 @@
+app:
+  name: platform
+  port: 8000
+  path: ""
+  health_check_path: "/ping"
+
+swarm:
+  replicas: 5
+  # max_replicas_per_node: 7 # replicas * 2 + 1
+  limits:
+    #cpus: 0.25
+    #memory: "256M"
+
+database:
+  databases:
+    - sfm
+  user: 
+    name: neo
+    password: "DBPASSWORD"
+
+env_vars:
+  OPENAI_API_KEY: "OPENAI_KEY"
+  OPENAI_MODEL: "OPENAI_MODEL"
+  VECTORIA_BASE_URL: "VECTORIA_BASE_URL"
+  VECTORIA_ACCESS_TOKEN: "scdcqsecer"
+  NODE_ENV: production
+  INTERCOM_SECRET_KEY: "INTERCOM_SECRET_KEY"

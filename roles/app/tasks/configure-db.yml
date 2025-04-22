@@ -1,0 +1,66 @@
+
+- name: "Check if username is not 'postgres'"
+  assert:
+    that:
+      - "{{ database_config.user.name != 'postgres' }}"
+    fail_msg: "Can't set database username to 'postgres'"
+  run_once: true
+  
+- name: "create user {{ database_config.user.name }}"
+  community.general.postgresql_user:
+    name: "{{ database_config.user.name }}"
+    password: "{{ database_config.user.password }}"
+    role_attr_flags: "SUPERUSER"
+    state: present
+  delegate_to: "{{ groups['database'][0] }}"
+  delegate_facts: true
+  become: true
+  become_user: postgres
+  register: database_user_create
+
+- name: "Configure {{ database_config.user.name }} access for internal network"
+  community.general.postgresql_pg_hba:
+    dest: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+    contype: host
+    users: "{{ database_config.user.name }}"
+    databases: "all"
+    source: "{{ vpc_cidr }}"
+    method: md5
+    create: true
+  delegate_to: "{{ groups['database'][0] }}"
+  become: true
+  become_user: postgres
+  when: vpc_cidr is defined
+  notify:
+    - "[POSTGRES] - reload postgres"
+
+- name: "Configure {{ database_config.user.name }} access"
+  community.general.postgresql_pg_hba:
+    dest: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+    contype: local
+    users: "{{ database_config.user.name }}"
+    databases: "all"
+    method: md5
+    create: true
+  delegate_to: "{{ groups['database'][0] }}"
+  become: true
+  become_user: postgres
+  notify:
+    - "[POSTGRES] - reload postgres"
+
+
+- name: "Create databases"
+  community.general.postgresql_db:
+    name: "{{ item }}"
+    owner: "{{ database_config.user.name }}"
+    state: present
+    encoding: "UTF-8"
+    lc_collate: "C.UTF-8"
+    lc_ctype: "C.UTF-8"
+    template: template0
+  delegate_to: "{{ groups['database'][0] }}"
+  delegate_facts: true
+  become: true
+  become_user: postgres
+  with_items: "{{ database_config.databases }}"
+

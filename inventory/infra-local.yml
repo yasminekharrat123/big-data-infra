@@ -1,0 +1,34 @@
+all:
+  children:
+    services:
+      hosts:
+        "192.168.56.10":
+          hostname: infra-node-1
+          swarm_master: true
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2222
+        "192.168.56.11":
+          swarm_manager: true
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2223
+          hostname: infra-node-2
+        "192.168.56.12":
+          swarm_manager: true
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2224
+          hostname: infra-node-3
+    database:
+      hosts:
+        "192.168.56.20":
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2232
+          hostname: infra-db-1
+    monitoring:
+      hosts:
+        "192.168.56.11":
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2223
+  vars:
+    vpc_cidr: "192.168.56.0/24"
+    platform_env: "local"
+    ansible_user: vagrant

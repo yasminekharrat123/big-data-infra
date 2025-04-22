@@ -1,0 +1,60 @@
+---
+- name: "Create a network for App {{ app_config.app.name }}"
+  community.docker.docker_network:
+    name: "network_{{ app_config.app.name }}"
+    ipam_driver: "default"
+    ipam_config:
+      - subnet:  "{{ docker_network_subnet }}" 
+  become: true
+
+- name: "[APP- {{ app_config.app.name }}] - Deploy {{ app_config.app.name }} stack"
+  community.docker.docker_stack:
+    state: present
+    with_registry_auth: true
+    name: "{{ app_config.app.name }}"
+    detach: false
+    compose:
+      - version: '3'
+        services:
+          app:
+            image: "{{ lookup('env', 'DOCKER_REGISTRY_IMAGE') }}:{{ lookup('env', 'DOCKER_IMAGE_TAG')}}"
+            logging:
+              driver: loki
+              options:
+                loki-url: "http://{{ hostvars[groups['monitoring'][0]]['loki_net'].fqdn }}:{{ hostvars[groups['monitoring'][0]]['loki_net'].port }}/loki/api/v1/push"
+            ports:
+              - "{{ app_config.app.port }}:{{ app_config.app.port }}"
+            environment: "{{ docker_environment }}"
+            healthcheck:
+              test: ["CMD", "curl", "-i", "http://localhost:{{ app_config.app.port }}{{ app_config.app.health_check_path }}"]
+              interval: 1m
+              timeout: 10s
+              retries: 2
+              start_period: 1m
+            deploy:
+              mode: replicated
+              replicas: "{{ app_config.swarm.replicas|int }}"
+              placement:
+                max_replicas_per_node: "{{ app_config.swarm.max_replicas_per_node | default('{{ app_config.swarm.replicas * 2}}')|int }}"    
+              update_config:
+                parallelism: "{{ app_config.swarm.replicas|int}}"
+                delay: 2s
+                order: start-first
+                failure_action: continue
+              labels: "{{ traefik_labels | items2dict }}"
+              resources:
+                limits:
+                  cpus: "{{ app_config.swarm.limits.cpus | default(1) | string }}"
+                  memory: "{{ app_config.swarm.limits.memory | default('512M', true) }}"
+                reservations: 
+                  cpus: "{{ ((app_config.swarm.limits.cpus | default(1)) / 2) | string }}"
+                  memory: "512M"
+            networks:
+              - traefik-network
+        networks:
+          traefik-network:
+            external: true
+
+  delegate_to: "{{ swarm_master_ip }}"
+  run_once: true
+  become: true

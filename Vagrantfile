@@ -21,13 +21,13 @@ Vagrant.configure("2") do |config|
       vm.vm.network "forwarded_port", guest: 22, host: node[:port]
 
       # Forward host port 8050 to VM node-1 port 80
-      if node[:name] == "node-1"
+      if node[:name] == "infra-node-1"
         vm.vm.network "forwarded_port", guest: 80, host: 8050
         vm.vm.network "forwarded_port", guest: 8080, host: 8085
       end
       
       # Forward host port 8051 to VM node-2 port 80
-      if node[:name] == "node-2"
+      if node[:name] == "infra-node-2"
         vm.vm.network "forwarded_port", guest: 80, host: 8051
       end
 

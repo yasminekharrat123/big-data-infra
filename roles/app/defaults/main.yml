@@ -22,7 +22,7 @@ docker_environment: "{{ base_environment | combine(app_config.env_vars) if app_c
 
 
 traefik_labels:
-  - key: "traefik.enable"-
+  - key: "traefik.enable"
     value: "true"
   - key: "traefik.http.routers.{{ app_config.app.name }}.rule"
     value: "Host(`{{ platform_host }}`)"

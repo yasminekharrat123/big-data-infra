@@ -2,9 +2,9 @@
 - name: "Create a network for App {{ app_config.app.name }}"
   community.docker.docker_network:
     name: "network_{{ app_config.app.name }}"
-    ipam_driver: "default"
-    ipam_config:
-      - subnet:  "{{ docker_network_subnet }}" 
+    # ipam_driver: "default"
+    # ipam_config:
+    #   - subnet:  "{{ docker_network_subnet }}" 
   become: true
 
 - name: "[APP- {{ app_config.app.name }}] - Deploy {{ app_config.app.name }} stack"
@@ -18,10 +18,8 @@
         services:
           app:
             image: "{{ lookup('env', 'DOCKER_REGISTRY_IMAGE') }}:{{ lookup('env', 'DOCKER_IMAGE_TAG')}}"
-            logging:
-              driver: loki
-              options:
-                loki-url: "http://{{ hostvars[groups['monitoring'][0]]['loki_net'].fqdn }}:{{ hostvars[groups['monitoring'][0]]['loki_net'].port }}/loki/api/v1/push"
+            # logging:
+            #   driver: loki
             ports:
               - "{{ app_config.app.port }}:{{ app_config.app.port }}"
             environment: "{{ docker_environment }}"

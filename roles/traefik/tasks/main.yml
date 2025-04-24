@@ -4,8 +4,8 @@
   file:
     path: "/etc/traefik"
     state: directory
-    owner: "{{ platform_user }}"
-    group: "{{ platform_user }}"
+    owner: "{{ system_user }}"
+    group: "{{ system_user }}"
   become: true
 
 - name: "[DOCKER-SWARM] - create public traefik network"
@@ -28,9 +28,7 @@
     command: traefik --configFile=/etc/traefik/traefik.yml
     state: started
     restart_policy: always
-    # log_driver: fluentd
-    # TODO: configure
-   ports:
+    ports:
       - "80:80"
       - "9180:9180"
       - "8082:8082"

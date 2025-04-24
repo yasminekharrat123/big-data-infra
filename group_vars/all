@@ -8,15 +8,15 @@ swarm_manager: false
 
 enable_ssl: false
 enable_subdomain_ssl: false
-platform_user: "{{ ansible_user | default('ubuntu') }}"
+system_user: "{{ ansible_user | default('ubuntu') }}"
 
 postgres_version: 16
 ANSIBLE_JINJA2_NATIVE: True
 
-# public_domain:  TODO: to define
+public_domain: yasmineandfriends.net
+internal_domain: yasmineandfriends-internal.net
 
 
-system_user: "appuser"
 custom_bin_path: "/usr/local/bin"
 logs_path: "/var/log/myapp"
 system_hostname: "web-server-01"

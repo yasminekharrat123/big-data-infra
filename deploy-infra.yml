@@ -1,7 +1,7 @@
 - name: "common role"
   hosts: all
   roles:
-    - base
+    - common
   tags:
     - base-tasks
 

@@ -1,0 +1,67 @@
+- name: "[METRICS] Install Python packages"
+  package:
+    name: "{{ metrics_packages }}"
+    state: present
+  become: true
+
+- name: "[METRICS] Ensure metrics group exists"
+  group:
+    name: "{{ metrics_group }}"
+    state: present
+  become: true
+
+- name: "[METRICS] Ensure metrics user exists"
+  user:
+    name: "{{ metrics_user }}"
+    group: "{{ metrics_group }}"
+    shell: /usr/sbin/nologin
+    create_home: false
+  become: true
+
+- name: "[METRICS] Create script directory"
+  file:
+    path: "{{ metrics_script_dir }}"
+    state: directory
+    owner: "{{ metrics_user }}"
+    group: "{{ metrics_group }}"
+    mode: '0755'
+  become: true
+
+- name: "[METRICS] Copy metrics collector script"
+  copy:
+    src: metrics/{{ metrics_script_name }}
+    dest: "{{ metrics_script_dir }}/{{ metrics_script_name }}"
+    owner: "{{ metrics_user }}"
+    group: "{{ metrics_group }}"
+    mode: '0755'
+  become: true
+
+- name: "[METRICS] Create log directory"
+  file:
+    path: "{{ metrics_log_dir }}"
+    state: directory
+    owner: "{{ metrics_user }}"
+    group: "{{ metrics_group }}"
+    mode: '0755'
+  become: true
+
+- name: "[METRICS] Deploy systemd unit for metrics collector"
+  template:
+    src: "{{ metrics_service_template }}"
+    dest: "/etc/systemd/system/{{ metrics_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: "[METRICS] Reload systemd daemon"
+  systemd:
+    daemon_reload: yes
+  become: true
+
+- name: "[METRICS] Enable and start metrics collector service"
+  systemd:
+    name: "{{ metrics_service_name }}"
+    enabled: yes
+    state: started
+  become: true

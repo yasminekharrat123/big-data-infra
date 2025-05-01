@@ -1,0 +1,17 @@
+[Unit]
+Description=Fluentd Log Collector
+After=network.target
+
+[Service]
+Type=simple
+User={{ fluentd_user }}
+Group={{ fluentd_group }}
+Environment=NODE_NAME={{ hostname }}
+Environment=FLUENTD_PORT={{ fluentd_port }}
+Environment=FLUENTD_LOG_PATH={{ fluentd_log_dir }}
+ExecStart={{ fluentd_gem_path }} -c {{ fluentd_config_dir }}/{{ fluentd_config_file }}
+Restart=always
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -1,9 +1,6 @@
-FROM fluent/fluentd:v1.16-1
+FROM fluent/fluentd
 
 USER root
-RUN apk update && \
-    apk add --no-cache build-base ruby-dev && \
-    gem install fluent-plugin-kafka && \
-    apk del build-base ruby-dev
+RUN fluent-gem install fluent-plugin-kafka
 
 USER fluent

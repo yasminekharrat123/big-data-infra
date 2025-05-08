@@ -1,0 +1,4 @@
+thresholds:
+  cpu: 60
+  mem: 60
+  disk: 60

@@ -81,12 +81,12 @@
 #   tags:
 #     - deploy-monitoring
 
-# - name: "deploy exporters"
-#   hosts: all
-#   handlers:
-#     - import_tasks: "roles/postgres/handlers/main.yml"
-#   roles:
-#     - exporters
-#   tags:
-#     - deploy-monitoring
-#     - deploy-exporters
+- name: "deploy exporters"
+  hosts: all
+  handlers:
+    - import_tasks: "roles/postgres/handlers/main.yml"
+  roles:
+    - exporters
+  tags:
+    - deploy-monitoring
+    - deploy-exporters

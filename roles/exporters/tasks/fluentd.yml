@@ -1,0 +1,89 @@
+- name: "[FLUENTD] Disable apt background services that cause dpkg locks"
+  become: true
+  block:
+    - name: Stop and disable apt timers
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+        masked: true
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+        - motd-news.timer
+        - apt-news.timer
+      ignore_errors: true
+
+- name: "[FLUENTD] Install required system packages"
+  package:
+    name: "{{ fluentd_required_packages }}"
+    state: present
+  become: true
+
+- name: "[FLUENTD] Ensure Fluentd group exists"
+  group:
+    name: "{{ fluentd_group }}"
+  become: true
+
+- name: "[FLUENTD] Ensure Fluentd user exists"
+  user:
+    name: "{{ fluentd_user }}"
+    group: "{{ fluentd_group }}"
+    shell: /usr/sbin/nologin
+    create_home: false
+  become: true
+
+- name: "[FLUENTD] Install Fluentd and plugins"
+  gem:
+    name: "{{ item }}"
+    state: latest
+    user_install: no
+    executable: /usr/bin/gem
+  loop: "{{ fluentd_plugins }}"
+  become: true
+
+- name: "[FLUENTD] Create config directory"
+  file:
+    path: "{{ fluentd_config_dir }}"
+    state: directory
+    owner: "{{ fluentd_user }}"
+    group: "{{ fluentd_group }}"
+    mode: '0755'
+  become: true
+
+- name: "[FLUENTD] Copy Fluentd config"
+  copy:
+    src: etc/fluentd/fluentd.conf 
+    dest: "{{ fluentd_config_dir }}/{{ fluentd_config_file }}"
+    owner: "{{ fluentd_user }}"
+    group: "{{ fluentd_group }}"
+    mode: '0644'
+  become: true
+
+- name: "[FLUENTD] Create log directory"
+  file:
+    path: "{{ fluentd_log_dir }}"
+    state: directory
+    owner: "{{ fluentd_user }}"
+    group: "{{ fluentd_group }}"
+    mode: '0755'
+  become: true
+
+- name: "[FLUENTD] Deploy systemd service unit"
+  template:
+    src:  "{{ fluentd_service_file }}"
+    dest: /etc/systemd/system/fluentd.service
+    mode: '0644'
+  become: true
+
+- name: "[FLUENTD] Reload systemd"
+  systemd:
+    daemon_reload: yes
+  become: true
+
+- name: "[FLUENTD] Enable and start Fluentd service"
+  systemd:
+    name: fluentd
+    enabled: yes
+    state: started
+  become: true

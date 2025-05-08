@@ -36,3 +36,4 @@ traefik_labels:
     value: "traefik-network"
 
 docker_network_subnet: "172.22.0.0/16"
+

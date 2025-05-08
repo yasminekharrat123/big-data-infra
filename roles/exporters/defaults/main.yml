@@ -1,2 +1,42 @@
 ---
+# Fluentd logs collector
 
+fluentd_user: fluentd
+fluentd_group: fluentd
+
+fluentd_config_dir: /etc/fluentd
+fluentd_config_file: fluentd.conf
+fluentd_service_file: fluentd/fluentd.service.jinja2
+
+fluentd_log_dir: /fluentd/log
+fluentd_gem_path: /usr/local/bin/fluentd
+
+fluentd_required_packages:
+  - ruby
+  - ruby-dev
+  - build-essential
+
+fluentd_plugins:
+  - fluentd
+  - fluent-plugin-kafka
+
+
+
+# Metrics collector
+
+metrics_user: metrics
+metrics_group: metrics
+
+metrics_script_dir: /opt/metrics_collector
+metrics_script_name: collector.py
+
+metrics_log_dir: /var/log/metrics_collector
+
+metrics_packages:
+  - python3
+  - python3-psutil
+
+metrics_service_template: metrics/metrics.service.jinja2
+metrics_service_name: metrics_collector
+
+collect_interval_seconds: 2

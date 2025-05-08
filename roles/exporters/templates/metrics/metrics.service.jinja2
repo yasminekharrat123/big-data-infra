@@ -1,0 +1,21 @@
+[Unit]
+Description=Python System Metrics Collector
+After=network.target
+
+[Service]
+Type=simple
+User={{ metrics_user }}
+Group={{ metrics_group }}
+
+Environment=COLLECT_INTERVAL={{collect_interval_seconds}}
+
+ExecStart=/usr/bin/python3 {{ metrics_script_dir }}/{{ metrics_script_name }}
+WorkingDirectory={{ metrics_script_dir }}
+
+
+Restart=always
+# restart after n seconds
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

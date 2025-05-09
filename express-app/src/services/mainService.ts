@@ -1,3 +1,5 @@
+import { HttpError } from "../errors/HttpError";
+
 declare global {
     var leakArray: any[];
 }
@@ -20,8 +22,16 @@ export class MainService {
     // Random error generator
     randomError(): { message: string } {
         const random = Math.random();
-        if (random < 0.3) {
-        throw new Error('Random server error occurred!');
+        if (random < 0.5) {
+        const errorTypes = [
+            { status: 500, message: 'Internal Server Error' },
+            { status: 401, message: 'Unauthorized: Invalid credentials provided' },
+            { status: 403, message: 'Forbidden: Access to resource denied' },
+            { status: 404, message: 'Not Found: Requested resource does not exist' },
+            { status: 400, message: 'Bad Request: Invalid input parameters' },
+        ];
+        const selectedError = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+        throw new HttpError(selectedError.status, selectedError.message);
         }
         return { message: 'Operation successful' };
     }

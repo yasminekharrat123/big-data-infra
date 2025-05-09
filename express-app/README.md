@@ -43,3 +43,19 @@
    {"method":"GET","url":"/error","status":400,"contentLength":"49","params":{"query":{}},"response":{"status":400,"body":{"error":"Bad Request: Invalid input parameters"}},"error":"Bad Request: Invalid input parameters"}
    ```
 
+## Load Testing with Locust
+ - Install Locust:
+   ```bash
+   pip install locust
+   ```
+ - Run Locust from the `locust/` directory:
+   ```bash
+   cd locust
+   locust -f locustfile.py --host=http://localhost:3000 --users=50 --spawn-rate=5 --run-time=1m --headless
+  ```
+  - `--host=http://localhost:3000`: Sets the target host for the load test.
+  - `--users=50`: number of simulated concurrent users.
+  - `--spawn-rate=5`: Spawns 5 users per second until the total number of users is reached.
+  - `--run-time=1m`: run the test for run-time minutes.
+  - `--headless`: Runs Locust in headless mode (without a web UI).
+   ```

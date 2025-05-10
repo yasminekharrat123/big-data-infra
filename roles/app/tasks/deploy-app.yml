@@ -18,8 +18,11 @@
         services:
           app:
             image: "{{ lookup('env', 'DOCKER_REGISTRY_IMAGE') }}:{{ lookup('env', 'DOCKER_IMAGE_TAG')}}"
-            # logging:
-            #   driver: loki
+            logging:
+              driver: fluentd
+              options:
+                fluentd-address: "tcp://localhost:{{ fluentd_port }}"
+                tag: "docker.{{.Name}}"
             ports:
               - "{{ app_config.app.port }}:{{ app_config.app.port }}"
             environment: "{{ docker_environment }}"

@@ -1,3 +1,5 @@
+from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.functions import (
@@ -20,13 +22,29 @@ CPU_THRESHOLD = config["thresholds"]["cpu"]
 MEM_THRESHOLD = config["thresholds"]["mem"]
 DISK_THRESHOLD = config["thresholds"]["disk"]
 
+ # Extract InfluxDB connection details
+INFLUX_URL    = config["influx"]["url"]
+INFLUX_TOKEN  = config["influx"]["token"]
+INFLUX_ORG    = config["influx"]["org"]
+INFLUX_BUCKET = config["influx"]["bucket"]
+
+print(f"InfluxDB Token: {INFLUX_TOKEN}")
+
+ # Initialize InfluxDB client
+influx_client = InfluxDBClient(
+    url=INFLUX_URL,
+    token=INFLUX_TOKEN,
+    org=INFLUX_ORG
+)
+print(influx_client.ping())
+write_api = influx_client.write_api(write_options=SYNCHRONOUS)
 
 schema = StructType() \
     .add("timestamp", TimestampType()) \
     .add("host", StringType()) \
-    .add("cpu", DoubleType()) \
-    .add("mem", DoubleType()) \
-    .add("disk", DoubleType())\
+    .add("avg_cpu", DoubleType()) \
+    .add("avg_mem", DoubleType()) \
+    .add("avg_disk", DoubleType())\
     .add("max_cpu", DoubleType()) \
     .add("max_mem", DoubleType()) \
     .add("max_disk", DoubleType())
@@ -71,9 +89,9 @@ tumbling = (
           col("host")
       )
       .agg(
-        avg("cpu").alias("avg_cpu"),
-        avg("mem").alias("avg_mem"),
-        avg("disk").alias("avg_disk"),
+        avg("avg_cpu").alias("avg_cpu"),
+        avg("avg_mem").alias("avg_mem"),
+        avg("avg_disk").alias("avg_disk"),
         last("max_cpu").alias("max_cpu"),
         last("max_mem").alias("max_mem"),
         last("max_disk").alias("max_disk")
@@ -89,35 +107,56 @@ def log_batch(df, batch_id):
     rows = df_sorted.collect()
     for row in rows:
         try:
-            # Simulate raw input dict for validation
+            points=[]
             data = {
                 "timestamp": row["window"].start.isoformat(),  
                 "host": row["host"], 
-                "cpu": row["avg_cpu"],
-                "mem": row["avg_mem"],
-                "disk": row["avg_disk"],
+                "avg_cpu": row["avg_cpu"],
+                "avg_mem": row["avg_mem"],
+                "avg_disk": row["avg_disk"],
                 "max_cpu": row["max_cpu"],
                 "max_mem": row["max_mem"],
                 "max_disk": row["max_disk"]
             }
 
             validated = Metrics(**data)
-
+            
+            points.extend([
+                Point("cpu_usage").tag("host", validated.host)
+                                .field("value", validated.avg_cpu)
+                                .field("allocated", validated.max_cpu)
+                                .time(validated.timestamp, WritePrecision.NS),
+                Point("mem_usage").tag("host", validated.host)
+                                .field("value", validated.avg_mem)
+                                .field("allocated", validated.max_mem)
+                                .time(validated.timestamp, WritePrecision.NS),
+                Point("disk_usage").tag("host", validated.host)
+                                .field("value", validated.avg_disk)
+                                .field("allocated", validated.max_disk)
+                                .time(validated.timestamp, WritePrecision.NS),
+            ])
+            # Write to InfluxDB
+            if points:
+                for point in points:
+                    print(f"Writing point: {point}")
+                write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=points)
+                print(f"✅ Wrote {len(points)} points to InfluxDB for batch {batch_id}")
+        
             alerts = []
-            if validated.cpu > CPU_THRESHOLD:
+            if validated.avg_cpu > CPU_THRESHOLD:
                 alerts.append(Alert(
-                    content=f"⚠️ High CPU usage on {validated.host}: {validated.cpu:.2f}%",
-                    metadata={"host": validated.host, "metric": "cpu", "value": validated.cpu, "threshold": CPU_THRESHOLD}
+                    content=f"⚠️ High CPU usage on {validated.host}: {validated.avg_cpu:.2f}%",
+                    metadata={"host": validated.host, "metric": "cpu", "value": validated.avg_cpu, "threshold": CPU_THRESHOLD}
                 ))
-            if validated.mem > MEM_THRESHOLD:
+            if validated.avg_mem > MEM_THRESHOLD:
                 alerts.append(Alert(
-                    content=f"⚠️ High Memory usage on {validated.host}: {validated.mem:.2f}%",
-                    metadata={"host": validated.host, "metric": "mem", "value": validated.mem, "threshold": MEM_THRESHOLD}
+                    content=f"⚠️ High Memory usage on {validated.host}: {validated.avg_mem:.2f}%",
+                    metadata={"host": validated.host, "metric": "mem", "value": validated.avg_mem, "threshold": MEM_THRESHOLD}
                 ))
-            if validated.disk > DISK_THRESHOLD:
+            if validated.avg_disk > DISK_THRESHOLD:
                 alerts.append(Alert(
-                    content=f"⚠️ High Disk usage on {validated.host}: {validated.disk:.2f}%",
-                    metadata={"host": validated.host, "metric": "disk", "value": validated.disk, "threshold": DISK_THRESHOLD}
+                    content=f"⚠️ High Disk usage on {validated.host}: {validated.avg_disk:.2f}%",
+                    metadata={"host": validated.host, "metric": "disk", "value": validated.avg_disk, "threshold": DISK_THRESHOLD}
                 ))
 
             if alerts:
@@ -127,6 +166,9 @@ def log_batch(df, batch_id):
                     
         except ValidationError as e:
             print(f"❌ Validation failed for row {row}: {e}")
+            
+        except Exception as e:
+            print(f"❌ Failed to write point: {e}")
 
 
 

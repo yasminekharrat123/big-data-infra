@@ -7,7 +7,7 @@ from confluent_kafka import Producer
 
 KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "localhost:9092") 
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC","metrics")
-
+collection_interval = int(os.environ.get("COLLECT_INTERVAL", "2"))
 
 
 
@@ -65,4 +65,4 @@ if __name__ == "__main__":
     while True:
         metrics = get_system_metrics()
         send_metrics(producer,metrics)
-        time.sleep(2)  # Collect and send every 2 seconds
+        time.sleep(collection_interval)

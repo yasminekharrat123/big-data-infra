@@ -5,12 +5,19 @@
   tags:
     - base-tasks
 
-- name: "deploy postgres"
-  hosts: database
+# - name: "deploy postgres"
+#   hosts: database
+#   roles:
+#     - postgres
+#   tags:
+#     - database
+
+- name: "deploy kafka"
+  hosts: ingestion
   roles:
-    - postgres
+    - kafka
   tags:
-    - database
+    - deploy-ingestion
 
 - name: "Set docker swarm manager node IP"
   hosts: all
@@ -62,12 +69,12 @@
   tags:
     - deploy-webserver
 
-- name: "deploy platform"
+- name: "deploy app"
   hosts:
     - services
-  handlers:
-    - name: postgres handlers 
-      import_tasks: "roles/postgres/handlers/main.yml"
+  # handlers:
+  #   - name: postgres handlers 
+  #     import_tasks: "roles/postgres/handlers/main.yml"
   roles:
     - app
   tags:
@@ -83,8 +90,6 @@
 
 - name: "deploy exporters"
   hosts: all
-  handlers:
-    - import_tasks: "roles/postgres/handlers/main.yml"
   roles:
     - exporters
   tags:

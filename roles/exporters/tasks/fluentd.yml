@@ -53,20 +53,11 @@
 
 - name: "[FLUENTD] Copy Fluentd config"
   copy:
-    src: etc/fluentd/fluentd.conf 
+    src: fluentd/fluentd.conf 
     dest: "{{ fluentd_config_dir }}/{{ fluentd_config_file }}"
     owner: "{{ fluentd_user }}"
     group: "{{ fluentd_group }}"
     mode: '0644'
-  become: true
-
-- name: "[FLUENTD] Create log directory"
-  file:
-    path: "{{ fluentd_log_dir }}"
-    state: directory
-    owner: "{{ fluentd_user }}"
-    group: "{{ fluentd_group }}"
-    mode: '0755'
   become: true
 
 - name: "[FLUENTD] Deploy systemd service unit"

@@ -17,8 +17,9 @@ fluentd_required_packages:
   - build-essential
 
 fluentd_plugins:
-  - fluentd
   - fluent-plugin-kafka
+
+fluentd_collect_interval: 2s
 
 
 

@@ -36,15 +36,6 @@
     mode: '0755'
   become: true
 
-- name: "[METRICS] Create log directory"
-  file:
-    path: "{{ metrics_log_dir }}"
-    state: directory
-    owner: "{{ metrics_user }}"
-    group: "{{ metrics_group }}"
-    mode: '0755'
-  become: true
-
 - name: "[METRICS] Deploy systemd unit for metrics collector"
   template:
     src: "{{ metrics_service_template }}"

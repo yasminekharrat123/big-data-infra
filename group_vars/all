@@ -22,3 +22,8 @@ logs_path: "/var/log/myapp"
 system_hostname: "web-server-01"
 
 fluentd_port: 24224
+fluentd_kafka_topic: "logs"
+metrics_kafka_topic: "metrics"
+
+
+kafka_broker: "192.168.56.12:9092"

@@ -2,7 +2,7 @@ app:
   name: test-express-app
   port: 3000
   path: ""
-  health_check_path: "/ping"
+  health_check_path: "/"
 
 swarm:
   replicas: 3
@@ -11,12 +11,12 @@ swarm:
   #   cpus: 0.25
   #   memory: "256M"
 
-database:
-  databases:
-    - users
-  user:
-    name: yasmine
-    password: "DBPASSWORD" 
+# database:
+#   databases:
+#     - users
+#   user:
+#     name: yasmine
+#     password: "DBPASSWORD" 
 
 
 env_vars:

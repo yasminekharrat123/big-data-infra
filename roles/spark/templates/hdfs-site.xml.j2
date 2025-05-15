@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <!-- NameNode configuration -->
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file://{{ hdfs_dirs.namenode }}</value>
+  </property>
+  <property>
+    <name>dfs.namenode.http-address</name>
+    <value>0.0.0.0:{{ hdfs_ports.namenode_http }}</value>
+  </property>
+
+  <!-- Secondary NameNode configuration -->
+  <property>
+    <name>dfs.namenode.secondary.http-address</name>
+    <value>0.0.0.0:{{ hdfs_ports.secondary_namenode }}</value>
+  </property>
+  <property>
+    <name>dfs.namenode.checkpoint.dir</name>
+    <value>file://{{ hdfs_dirs.secondary_namenode }}</value>
+  </property>
+
+  <!-- DataNode configuration -->
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>{% for dir in hdfs_dirs.datanodes %}file://{{ dir }}{% if not loop.last %},{% endif %}{% endfor %}</value>
+  </property>
+  <property>
+    <name>dfs.datanode.address</name>
+    <value>0.0.0.0:{{ hdfs_ports.datanode }}</value>
+  </property>
+  <property>
+    <name>dfs.datanode.http.address</name>
+    <value>0.0.0.0:{{ hdfs_ports.datanode_http }}</value>
+  </property>
+  <property>
+    <name>dfs.datanode.ipc.address</name>
+    <value>0.0.0.0:{{ hdfs_ports.datanode_ipc }}</value>
+  </property>
+
+  <!-- Replication factor -->
+  <property>
+    <name>dfs.replication</name>
+    <value>{{ hadoop_config.replication_factor }}</value>
+  </property>
+</configuration>

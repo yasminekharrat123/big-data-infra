@@ -1,0 +1,156 @@
+---
+
+- name: "[HDFS] Install required packages"
+  apt:
+    name: "{{ item }}"
+    state: present
+    install_recommends: no 
+  loop: "{{ required_packages }}"
+  register: package_install
+  become: true
+
+- name: "[HDFS] Create Hadoop user and group"
+  group:
+    name: "{{ hdfs_group }}"
+    state: present
+  become: true
+  register: group_created
+
+- name: "[HDFS] Create Hadoop user"
+  user:
+    name: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    shell: /bin/bash
+    state: present
+    create_home: yes
+  become: true
+  when: group_created.changed
+
+- name: "[HDFS] Create installation directory"
+  file:
+    path: "{{ install_dir }}"
+    state: directory
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    mode: '0755'
+  become: true
+
+- name: "[HDFS] Fetch Hadoop checksum file"
+  uri:
+    url: "https://archive.apache.org/dist/hadoop/common/hadoop-{{ hadoop_version }}/hadoop-{{ hadoop_version }}.tar.gz.sha512"
+    return_content: yes
+  register: hadoop_checksum_file
+
+
+- name: "[HDFS] Extract correct checksum string"
+  set_fact:
+    hadoop_checksum_value: "{{ hadoop_checksum_file.content.split('=')[1] | trim | lower }}"
+
+- name: "[HDFS] Download Hadoop"
+  get_url:
+    url: "https://archive.apache.org/dist/hadoop/common/hadoop-{{ hadoop_version }}/hadoop-{{ hadoop_version }}.tar.gz"
+    dest: "/tmp/hadoop-{{ hadoop_version }}.tar.gz"
+    checksum: "sha512:{{ hadoop_checksum_value }}"
+  register: hadoop_download
+  become: true
+
+
+- name: "[HDFS] Extract Hadoop"
+  unarchive:
+    src: "/tmp/hadoop-{{ hadoop_version }}.tar.gz"
+    dest: "{{ install_dir }}"
+    remote_src: yes
+    extra_opts: ["--strip-components=1"]
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+  when: hadoop_download.changed
+  become: true
+
+- name: "[HDFS] Create HDFS directories"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    mode: '0755'
+  loop: "{{ [hdfs_dirs.namenode, hdfs_dirs.secondary_namenode] + hdfs_dirs.datanodes }}"
+  become: true
+
+- name: "[HDFS] Configure environment variables"
+  template:
+    src: "hadoop-env.sh.j2"
+    dest: "{{ install_dir }}/etc/hadoop/hadoop-env.sh"
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    mode: '0644'
+  become: true
+
+- name: "[HDFS] Configure core-site.xml"
+  template:
+    src: "core-site.xml.j2"
+    dest: "{{ install_dir }}/etc/hadoop/core-site.xml"
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    mode: '0644'
+  become: true
+
+- name: "[HDFS] Configure hdfs-site.xml"
+  template:
+    src: "hdfs-site.xml.j2"
+    dest: "{{ install_dir }}/etc/hadoop/hdfs-site.xml"
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    mode: '0644'
+  become: true
+
+- name: "[HDFS] Configure workers file"
+  copy:
+    content: "localhost\n"
+    dest: "{{ install_dir }}/etc/hadoop/workers"
+    owner: "{{ hdfs_user }}"
+    group: "{{ hdfs_group }}"
+    mode: '0644'
+  become: true
+
+- name: "[HDFS] Set up SSH key for Hadoop user"
+  become_user: "{{ hdfs_user }}"
+  shell: |
+    ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+    chmod 0600 ~/.ssh/authorized_keys
+  args:
+    creates: "/home/{{ hdfs_user }}/.ssh/id_rsa"
+  become: true
+
+- name: "[HDFS] Format HDFS NameNode"
+  become_user: "{{ hdfs_user }}"
+  command: "{{ install_dir }}/bin/hdfs namenode -format -force"
+  args:
+    creates: "{{ hdfs_dirs.namenode }}/current/VERSION"
+  environment:
+    JAVA_HOME: "{{ java_home }}"
+    HADOOP_HOME: "{{ install_dir }}"
+  become: true
+
+- name: "[HDFS] Start HDFS services"
+  become_user: "{{ hdfs_user }}"
+  shell: "{{ install_dir }}/sbin/start-dfs.sh"
+  environment:
+    JAVA_HOME: "{{ java_home }}"
+    HADOOP_HOME: "{{ install_dir }}"
+  register: start_services
+  changed_when: "'starting' in start_services.stdout"
+  become: true
+
+- name: "[HDFS] Verify HDFS services are running"
+  shell: "jps"
+  register: jps_output
+  changed_when: false
+  failed_when: >
+    ('NameNode' not in jps_output.stdout) or
+    ('SecondaryNameNode' not in jps_output.stdout) or
+    ('DataNode' not in jps_output.stdout)
+  environment:
+    JAVA_HOME: "{{ java_home }}"
+    PATH: "{{ install_dir }}/bin:{{ ansible_env.PATH }}"
+  become: true

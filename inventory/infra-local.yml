@@ -28,6 +28,13 @@ all:
         "192.168.56.11":
           ansible_host: "{{ansible_ssh_lb}}"
           ansible_port: 2223
+    big_data:
+      hosts: 
+        "192.168.56.30":
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2240
+          hostname: infra-bigdata-1
+
   vars:
     vpc_cidr: "192.168.56.0/24"
     platform_env: "local"

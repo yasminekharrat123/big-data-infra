@@ -90,3 +90,10 @@
   tags:
     - deploy-monitoring
     - deploy-exporters
+
+- name: "deploy hdfs and spark"
+  hosts: big_data
+  roles:
+    - spark
+  tags:
+    - deploy-hdfs-spark

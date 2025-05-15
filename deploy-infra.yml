@@ -5,13 +5,6 @@
   tags:
     - base-tasks
 
-# - name: "deploy postgres"
-#   hosts: database
-#   roles:
-#     - postgres
-#   tags:
-#     - database
-
 - name: "deploy kafka"
   hosts: ingestion
   roles:
@@ -27,13 +20,11 @@
       when: hostvars[item].swarm_master | default(false) == true
       with_items: "{{ groups['services'] }}"
       run_once: true
-    
   tags:
     - docker-install
     - swarm-manager
     - deploy-webserver
     - deploy-monitoring
-    - deploy-exporters
     - deploy-app
 
 - name: "deploy docker"
@@ -69,24 +60,6 @@
   tags:
     - deploy-webserver
 
-- name: "deploy app"
-  hosts:
-    - services
-  # handlers:
-  #   - name: postgres handlers 
-  #     import_tasks: "roles/postgres/handlers/main.yml"
-  roles:
-    - app
-  tags:
-     - deploy-app
-
-# - name: "deploy monitoring"
-#   hosts:
-#     - monitoring
-#   roles:
-#     - monitoring
-#   tags:
-#     - deploy-monitoring
 
 - name: "deploy exporters"
   hosts: all
@@ -95,3 +68,13 @@
   tags:
     - deploy-monitoring
     - deploy-exporters
+
+
+
+- name: "deploy app"
+  hosts:
+    - services
+  roles:
+    - app
+  tags:
+     - deploy-app

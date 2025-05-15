@@ -31,6 +31,11 @@ Vagrant.configure("2") do |config|
         vm.vm.network "forwarded_port", guest: 80, host: 8051
       end
 
+      if node[:name] == "infra-node-3"
+        vm.vm.network "forwarded_port", guest: 9092, host: 9092
+      end
+
+
       # Provisioning steps
       vm.vm.provision "shell", inline: <<-SHELL
         sudo apt update -y

@@ -4,6 +4,8 @@
 fluentd_user: fluentd
 fluentd_group: fluentd
 
+
+fluentd_src: fluentd/fluentd.conf
 fluentd_config_dir: /etc/fluentd
 fluentd_config_file: fluentd.conf
 fluentd_service_file: fluentd/fluentd.service.jinja2

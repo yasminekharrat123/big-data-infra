@@ -27,10 +27,6 @@
     command: traefik --configFile=/etc/traefik/traefik.yml
     state: started
     restart_policy: always
-    # log_driver: fluentd
-    # log_options:
-    #   fluentd-address: "tcp://localhost:24224"
-    #   tag: "application.{{.Name}}"
     ports:
       - "80:80"
       - "9180:9180"

@@ -4,6 +4,8 @@
 fluentd_user: fluentd
 fluentd_group: fluentd
 
+
+fluentd_src: fluentd/fluentd.conf
 fluentd_config_dir: /etc/fluentd
 fluentd_config_file: fluentd.conf
 fluentd_service_file: fluentd/fluentd.service.jinja2
@@ -17,26 +19,34 @@ fluentd_required_packages:
   - build-essential
 
 fluentd_plugins:
-  - fluentd
   - fluent-plugin-kafka
+
+fluentd_collect_interval: 2s
 
 
 
 # Metrics collector
 
-metrics_user: metrics
-metrics_group: metrics
+metrics_user: metrics_collector
+metrics_group: metrics_collector
 
 metrics_script_dir: /opt/metrics_collector
 metrics_script_name: collector.py
 
 metrics_log_dir: /var/log/metrics_collector
 
-metrics_packages:
-  - python3
-  - python3-psutil
+metrics_venv_packages:
+  - psutil
+  - confluent-kafka
+
+metrics_system_packages:
+  - python3-pip      
+  - python3-venv      
+  - librdkafka-dev    
+  - build-essential 
 
 metrics_service_template: metrics/metrics.service.jinja2
-metrics_service_name: metrics_collector
+metrics_service_name: metrics-collector
 
-collect_interval_seconds: 2
+collect_interval_seconds: "2"
+metrics_venv_dir: "{{ metrics_script_dir }}/venv"

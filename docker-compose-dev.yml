@@ -1,0 +1,68 @@
+## This docker compose is used for testing purposes only
+
+services:
+  express:
+    image: test-app
+    build:
+      context: ../app/
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "tcp://0.0.0.0:24224"
+        tag: "application.{{.Name}}"
+    depends_on:
+      - fluentd
+
+  system-metrics:
+    image: system-metrics
+    build:
+      context: ./metrics_collector/
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=metrics
+    depends_on:
+      - kafka
+
+
+# The first volume mount is used 
+  fluentd:
+    image: fluentd
+    build: 
+      context: ./fluentd
+      dockerfile: Dockerfile
+    volumes:
+      - ./fluentd/fluentd.conf:/fluentd/etc/fluent.conf
+    environment:
+      - NODE_NAME=local-hp-pc
+      - KAFKA_TOPIC=logs
+      - KAFKA_BROKER=kafka:9092
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    command: sh -c "fluentd -c /fluentd/etc/fluent.conf"
+    depends_on:
+      - kafka
+
+  kafka:
+      image: apache/kafka
+      container_name: kafka
+      ports:
+        - "9092:9092"
+        - "9093:9093" 
+      environment:
+        KAFKA_NODE_ID: 1
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+        KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+        KAFKA_NUM_PARTITIONS: 1

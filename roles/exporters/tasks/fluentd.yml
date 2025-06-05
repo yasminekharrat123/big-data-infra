@@ -53,13 +53,13 @@
 
 - name: "[FLUENTD] Copy Fluentd config"
   copy:
-    src: etc/fluentd/fluentd.conf 
+    src: "{{ fluentd_src }}" 
     dest: "{{ fluentd_config_dir }}/{{ fluentd_config_file }}"
     owner: "{{ fluentd_user }}"
     group: "{{ fluentd_group }}"
     mode: '0644'
   become: true
-
+  
 - name: "[FLUENTD] Create log directory"
   file:
     path: "{{ fluentd_log_dir }}"
@@ -78,7 +78,7 @@
 
 - name: "[FLUENTD] Reload systemd"
   systemd:
-    daemon_reload: yes
+    daemon_reload: yes  
   become: true
 
 - name: "[FLUENTD] Enable and start Fluentd service"

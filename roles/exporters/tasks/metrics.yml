@@ -1,7 +1,8 @@
-- name: "[METRICS] Install Python packages"
-  package:
-    name: "{{ metrics_packages }}"
+- name: "[METRICS] Install system prerequisites"
+  apt:
+    name: "{{ metrics_system_packages }}"
     state: present
+    # update_cache: yes
   become: true
 
 - name: "[METRICS] Ensure metrics group exists"
@@ -16,9 +17,10 @@
     group: "{{ metrics_group }}"
     shell: /usr/sbin/nologin
     create_home: false
+    system: yes
   become: true
 
-- name: "[METRICS] Create script directory"
+- name: "[METRICS] Create script and virtual environment parent directory"
   file:
     path: "{{ metrics_script_dir }}"
     state: directory
@@ -29,17 +31,26 @@
 
 - name: "[METRICS] Copy metrics collector script"
   copy:
-    src: metrics/{{ metrics_script_name }}
+    src: metrics/{{ metrics_script_name }} # Assuming script is in "files/metrics/" relative to playbook
     dest: "{{ metrics_script_dir }}/{{ metrics_script_name }}"
     owner: "{{ metrics_user }}"
     group: "{{ metrics_group }}"
     mode: '0755'
   become: true
 
-- name: "[METRICS] Create log directory"
-  file:
-    path: "{{ metrics_log_dir }}"
-    state: directory
+- name: "[METRICS] Install Python packages into virtual environment"
+  ansible.builtin.pip:
+    name: "{{ metrics_venv_packages }}"
+    virtualenv: "{{ metrics_venv_dir }}"
+    virtualenv_command: /usr/bin/python3 -m venv
+    state: present
+  become: true
+  become_user: "{{ metrics_user }}" 
+
+- name: "[METRICS] Copy metrics collector script"
+  copy:
+    src: metrics/{{ metrics_script_name }}
+    dest: "{{ metrics_script_dir }}/{{ metrics_script_name }}"
     owner: "{{ metrics_user }}"
     group: "{{ metrics_group }}"
     mode: '0755'
@@ -54,14 +65,11 @@
     mode: '0644'
   become: true
 
-- name: "[METRICS] Reload systemd daemon"
-  systemd:
-    daemon_reload: yes
-  become: true
 
 - name: "[METRICS] Enable and start metrics collector service"
   systemd:
     name: "{{ metrics_service_name }}"
     enabled: yes
     state: started
+    daemon_reload: yes 
   become: true

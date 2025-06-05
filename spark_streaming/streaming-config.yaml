@@ -1,0 +1,10 @@
+thresholds:
+  cpu: 60
+  mem: 60
+  disk: 60
+
+influx:
+  url: "http://127.0.0.1:8086"
+  token: "secure-token"
+  org:  "fankoush.co"
+  bucket: "system-metrics"

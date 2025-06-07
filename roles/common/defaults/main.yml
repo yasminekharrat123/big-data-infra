@@ -10,3 +10,4 @@ base_packages:
   - libpq-dev
   - unzip
   - acl
+  - zip

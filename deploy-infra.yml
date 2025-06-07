@@ -30,6 +30,7 @@
 - name: "deploy docker"
   hosts: 
     - services
+    - big_data
     - monitoring
   handlers:
   - name: "Restart Docker"
@@ -50,6 +51,17 @@
   tags: 
     - swarm-manager
   
+- name: "deploy exporters"
+  hosts:
+    - services
+  handlers:
+    - import_tasks: "roles/postgres/handlers/main.yml"
+  roles:
+    - exporters
+  tags:
+    - deploy-monitoring
+    - deploy-exporters
+  
 - name: "deploy webserver"
   serial: 1
   hosts:
@@ -61,13 +73,14 @@
     - deploy-webserver
 
 
-- name: "deploy exporters"
-  hosts: all
+
+
+- name: "deploy hdfs and spark"
+  hosts: big_data
   roles:
-    - exporters
+    - hdfs-spark
   tags:
-    - deploy-monitoring
-    - deploy-exporters
+    - deploy-hdfs-spark
 
 
 

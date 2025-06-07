@@ -1,0 +1,68 @@
+- name: "[SPARK] Create flat spark-libs.zip inside container"
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc '
+        cd /usr/local/spark/jars &&
+        zip -j /tmp/spark-libs.zip *.jar
+      '
+  become: true
+
+- name: "[SPARK] Ensure spark.yarn.archive is set in spark-defaults.conf"
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc '
+        FILE="$SPARK_HOME/conf/spark-defaults.conf"
+        LINE="spark.yarn.archive hdfs:///spark/spark-libs.zip"
+        grep -qxF "$LINE" "$FILE" \
+          || echo "$LINE" >> "$FILE"
+      '
+  become: true
+
+- name: "[HDFS] Upload spark-libs.zip to HDFS (overwrite)"
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc '
+        hdfs dfs -put -f /tmp/spark-libs.zip /spark/spark-libs.zip
+      '
+  become: true
+
+- name: "[HDFS] Verify flat-zip structure in HDFS"
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc '
+        # clean up any stale check.zip
+        rm -f /tmp/check.zip &&
+        # pull down the new archive
+        hdfs dfs -get /spark/spark-libs.zip /tmp/check.zip &&
+        # list the first 10 entries to confirm flat layout
+        unzip -l /tmp/check.zip | head -n 10
+      '
+  register: zip_check
+  changed_when: false
+  failed_when: zip_check.rc != 0
+  become: true
+
+- name: "[DEBUG] Show first lines of spark-libs.zip contents"
+  debug:
+    msg: "{{ zip_check.stdout_lines }}"
+
+- name: "[SPARK] Verify spark-shell can start with YARN archive"
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc '
+        spark-shell \
+          --conf spark.yarn.archive=hdfs:///spark/spark-libs.zip
+      '
+  register: spark_shell_check
+  changed_when: false
+  failed_when: spark_shell_check.rc != 0
+  become: true
+
+- name: "[SPARK] Show spark-shell startup output"
+  debug:
+    msg: "{{ spark_shell_check.stdout_lines[0:5] }}"

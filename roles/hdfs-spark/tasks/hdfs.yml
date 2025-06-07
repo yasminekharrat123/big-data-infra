@@ -1,0 +1,66 @@
+- name: "[HDFS] Ensure Docker network '{{ hadoop_network }}' exists"
+  become: true
+  community.docker.docker_network:
+    name: "{{ hadoop_network }}"
+    driver: bridge
+    state: present
+
+- name: "[HDFS] Pull Hadoop image '{{ hadoop_image }}'"
+  become: true
+  community.docker.docker_image:
+    name: "{{ hadoop_image }}"
+    source: pull
+
+- name: "[HDFS] Run Hadoop master container"
+  become: true
+  community.docker.docker_container:
+    name: "{{ master_container.name }}"
+    hostname: "{{ master_container.hostname }}"
+    image: "{{ hadoop_image }}"
+    networks:
+      - name: "{{ hadoop_network }}"
+    published_ports: "{{ master_container.ports }}"
+    detach: true
+    interactive: true
+    tty: true
+    restart_policy: unless-stopped
+
+- name: "[HDFS] Run Hadoop worker containers"
+  become: true
+  loop: "{{ workers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  community.docker.docker_container:
+    name: "{{ item.name }}"
+    hostname: "{{ item.hostname }}"
+    image: "{{ hadoop_image }}"
+    networks:
+      - name: "{{ hadoop_network }}"
+    published_ports:
+      - "{{ item.port }}:8042"
+    detach: true
+    interactive: true
+    tty: true
+    restart_policy: unless-stopped
+
+- name: "[HDFS] Wait for master container to be ready"
+  become: true
+  community.docker.docker_container_info:
+    name: "{{ master_container.name }}"
+  register: master_container_info
+  until: master_container_info.container.State.Running
+  retries: 10
+  delay: 2
+
+- name: "[HDFS] Start Hadoop and YARN services inside the master container"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: "./start-hadoop.sh"
+    chdir: "/root"
+    tty: true
+  register: hadoop_start_result
+
+- name: "[HDFS] Display Hadoop start output"
+  debug:
+    var: hadoop_start_result.stdout_lines

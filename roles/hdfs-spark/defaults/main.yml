@@ -1,0 +1,19 @@
+hadoop_image: "liliasfaxi/hadoop-cluster:latest"
+hadoop_network: "hadoop"
+master_container:
+  name: "hadoop-master"
+  hostname: "hadoop-master"
+  ports:
+    - "9870:9870"    # Namenode UI
+    - "8088:8088"    # YARN ResourceManager UI
+    - "7077:7077"    # Spark Master
+    - "16010:16010"  # JobHistoryServer
+workers:
+  - name: "hadoop-worker1"
+    hostname: "hadoop-worker1"
+    port: "8040"
+  - name: "hadoop-worker2"
+    hostname: "hadoop-worker2"
+    port: "8041"
+
+    

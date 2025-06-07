@@ -17,7 +17,7 @@ all:
           ansible_host: "{{ansible_ssh_lb}}"
           ansible_port: 2224
           hostname: infra-node-3
-    database:
+    querying:
       hosts:
         "192.168.56.20":
           ansible_host: "{{ansible_ssh_lb}}"
@@ -34,7 +34,6 @@ all:
           ansible_host: "{{ansible_ssh_lb}}"
           ansible_port: 2240
           hostname: infra-bigdata-1
-
     ingestion:
       hosts:
         "192.168.56.12":

@@ -1,0 +1,37 @@
+- name: "[INFLUXDB] Create directory for InfluxDB data"
+  ansible.builtin.file:
+    path: "{{ influxdb.influx_data_dir }}"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: "[INFLUXDB] Deploy InfluxDB container"
+  community.docker.docker_container:
+    name: "{{ influxdb.container_name }}"
+    image: "{{ influxdb.image }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "{{ influxdb.host_port }}:{{ influxdb.container_port }}"
+    volumes:
+      - "{{ influxdb.volume_name }}:{{ influxdb.data_path }}"
+    env:
+      DOCKER_INFLUXDB_INIT_MODE: "setup"
+      DOCKER_INFLUXDB_INIT_USERNAME: "{{ influxdb_init.username }}"
+      DOCKER_INFLUXDB_INIT_PASSWORD: "{{ influxdb_init.password }}"
+      DOCKER_INFLUXDB_INIT_ORG: "{{ influxdb_init.org }}"
+      DOCKER_INFLUXDB_INIT_BUCKET: "{{ influxdb_init.bucket }}"
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "{{ influxdb_init.admin_token }}"
+  become: true
+
+- name: "[INFLUXDB] Verify InfluxDB is running"
+  ansible.builtin.uri:
+    url: "http://localhost:{{ influxdb.host_port }}/health"
+    method: GET
+    status_code: 200
+    timeout: 30
+  register: influx_health
+  become: true
+  until: influx_health.status == 200
+  retries: 5
+  delay: 5

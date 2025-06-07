@@ -1,0 +1,20 @@
+thresholds:
+  cpu: 60
+  mem: 60
+  disk: 60
+
+influx:
+  url: "http://127.0.0.1:8086"
+  token: "test"
+  org:  "test"
+  bucket: "system-metrics"
+
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http
+  user: test
+  password: test
+  alert_index: "system-alerts"
+  report-index: "daily-reports"

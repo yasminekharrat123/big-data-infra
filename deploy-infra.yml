@@ -32,6 +32,7 @@
 - name: "deploy docker"
   hosts: 
     - services
+    - big_data
     - monitoring
   handlers:
   - name: "Restart Docker"
@@ -51,6 +52,17 @@
       when: swarm_master == true
   tags: 
     - swarm-manager
+  
+- name: "deploy exporters"
+  hosts:
+    - services
+  handlers:
+    - import_tasks: "roles/postgres/handlers/main.yml"
+  roles:
+    - exporters
+  tags:
+    - deploy-monitoring
+    - deploy-exporters
   
 - name: "deploy webserver"
   serial: 1
@@ -81,19 +93,11 @@
 #   tags:
 #     - deploy-monitoring
 
-- name: "deploy exporters"
-  hosts: all
-  handlers:
-    - import_tasks: "roles/postgres/handlers/main.yml"
-  roles:
-    - exporters
-  tags:
-    - deploy-monitoring
-    - deploy-exporters
+
 
 - name: "deploy hdfs and spark"
   hosts: big_data
   roles:
-    - spark
+    - hdfs-spark
   tags:
     - deploy-hdfs-spark

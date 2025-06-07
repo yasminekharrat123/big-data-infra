@@ -47,13 +47,27 @@
   tags: 
     - swarm-manager
 
+- name: "deploy hdfs and spark"
+  hosts: big_data
+  roles:
+    - hdfs-spark
+  tags:
+    - deploy-hdfs-spark
+
 - name: "deploy kafka"
   hosts: ingestion
   roles:
     - kafka
   tags:
     - deploy-ingestion
-  
+
+- name: "deploy kafka connect"
+  hosts: ingestion
+  roles:
+    - kafka-connect
+  tags:
+    - deploy-ingestion
+
 - name: "deploy exporters"
   hosts:
     - services
@@ -63,13 +77,13 @@
     - deploy-monitoring
     - deploy-exporters
 
-# - name: "deploy kafka connect"
-#   hosts: ingestion
-#   roles:
-#     - kafka-connect
-#   tags:
-#     - deploy-ingestion
-  
+- name: "deploy databases for query layer"
+  hosts: querying
+  roles:
+    - databases
+  tags:
+    - deploy-query-layer
+
 - name: "deploy webserver"
   serial: 1
   hosts:
@@ -79,22 +93,7 @@
     - traefik
   tags:
     - deploy-webserver
-
-- name: "deploy databases for query layer"
-  hosts: querying
-  roles:
-    - databases
-  tags:
-    - deploy-query-layer
-
-- name: "deploy hdfs and spark"
-  hosts: big_data
-  roles:
-    - hdfs-spark
-  tags:
-    - deploy-hdfs-spark
-
-
+    
 - name: "deploy app"
   hosts:
     - services

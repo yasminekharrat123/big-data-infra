@@ -36,11 +36,11 @@ Vagrant.configure("2") do |config|
       # Forward host port 8051 to VM node-2 port 80
       if node[:name] == "infra-node-2"
         vm.vm.network "forwarded_port", guest: 80, host: 8051
+        vm.vm.network "forwarded_port", guest: 9092, host: 9092  # KAFKA
+        vm.vm.network "forwarded_port", guest: 8083, host: 8083  # KAFKA Connect
+
       end
 
-      if node[:name] == "infra-node-3"
-        vm.vm.network "forwarded_port", guest: 9092, host: 9092
-      end
 
       if node[:name] == "infra-db-1"
         # Elasticsearch

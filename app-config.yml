@@ -1,5 +1,5 @@
 app:
-  name: test-express-app
+  name: big-data-app
   port: 3000
   path: ""
   health_check_path: "/"
@@ -10,13 +10,6 @@ swarm:
   # limits:
   #   cpus: 0.25
   #   memory: "256M"
-
-# database:
-#   databases:
-#     - users
-#   user:
-#     name: yasmine
-#     password: "DBPASSWORD" 
 
 
 env_vars:

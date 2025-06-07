@@ -3,19 +3,7 @@ app_config: "{{ lookup('file', app_config_file | default('app-config.yml')) | fr
 
 platform_host: "{{ platform_env  }}.{{ app_config.app.name }}.{{ public_domain }}"
 
-# database_config:
-#   databases: "{{ app_config.database.databases }}"
-#   user:
-#     name: "{{ app_config.database.user.name | default('insat') }}" 
-#     password: "{{ app_config.database.user.password }}"
-#   host: "{{ groups['database'][0] }}"
-
 base_environment:
-  # PORT: "{{ app_config.app.port }}"
-  # DB_USER: "{{ database_config.user.name }}"
-  # DB_PASSWORD: "{{ database_config.user.password }}"
-  # DB_HOST: "{{ database_config.host }}"
-  # DB_PORT: 5432
   BASEURL: "https://{{ platform_host }}"
 
 docker_environment: "{{ base_environment | combine(app_config.env_vars) if app_config.env_vars is defined else base_environment }}"

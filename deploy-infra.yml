@@ -5,12 +5,12 @@
   tags:
     - base-tasks
 
-- name: "deploy postgres"
-  hosts: database
+- name: "deploy kafka"
+  hosts: ingestion
   roles:
-    - postgres
+    - kafka
   tags:
-    - database
+    - deploy-ingestion
 
 - name: "Set docker swarm manager node IP"
   hosts: all
@@ -20,13 +20,11 @@
       when: hostvars[item].swarm_master | default(false) == true
       with_items: "{{ groups['services'] }}"
       run_once: true
-    
   tags:
     - docker-install
     - swarm-manager
     - deploy-webserver
     - deploy-monitoring
-    - deploy-exporters
     - deploy-app
 
 - name: "deploy docker"
@@ -74,24 +72,6 @@
   tags:
     - deploy-webserver
 
-- name: "deploy platform"
-  hosts:
-    - services
-  handlers:
-    - name: postgres handlers 
-      import_tasks: "roles/postgres/handlers/main.yml"
-  roles:
-    - app
-  tags:
-     - deploy-app
-
-# - name: "deploy monitoring"
-#   hosts:
-#     - monitoring
-#   roles:
-#     - monitoring
-#   tags:
-#     - deploy-monitoring
 
 
 
@@ -101,3 +81,13 @@
     - hdfs-spark
   tags:
     - deploy-hdfs-spark
+
+
+
+- name: "deploy app"
+  hosts:
+    - services
+  roles:
+    - app
+  tags:
+     - deploy-app

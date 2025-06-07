@@ -8,7 +8,9 @@ User={{ fluentd_user }}
 Group={{ fluentd_group }}
 Environment=NODE_NAME={{ hostname }}
 Environment=FLUENTD_PORT={{ fluentd_port }}
-Environment=FLUENTD_LOG_PATH={{ fluentd_log_dir }}
+Environment=KAFKA_TOPIC={{ fluentd_kafka_topic }}
+Environment=KAFKA_BROKER={{ kafka_broker }}
+Environment=COLLECT_INTERVAL={{ fluentd_collect_interval }}
 ExecStart={{ fluentd_gem_path }} -c {{ fluentd_config_dir }}/{{ fluentd_config_file }}
 Restart=always
 LimitNOFILE=65536

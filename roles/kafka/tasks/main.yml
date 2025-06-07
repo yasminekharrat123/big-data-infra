@@ -1,0 +1,9 @@
+- name: Run Kafka Docker container
+  docker_container:
+    name: "{{ kafka.container_name }}"
+    image: "{{ kafka.image }}"
+    state: started
+    restart_policy: always
+    ports: "{{ kafka.ports }}"
+    env: "{{ kafka.environment }}"
+  become: true

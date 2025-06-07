@@ -35,6 +35,11 @@ all:
           ansible_port: 2240
           hostname: infra-bigdata-1
 
+    ingestion:
+      hosts:
+        "192.168.56.12":
+          ansible_host: "{{ansible_ssh_lb}}"
+          ansible_port: 2224
   vars:
     vpc_cidr: "192.168.56.0/24"
     platform_env: "local"

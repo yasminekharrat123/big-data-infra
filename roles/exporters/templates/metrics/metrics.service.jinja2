@@ -8,8 +8,11 @@ User={{ metrics_user }}
 Group={{ metrics_group }}
 
 Environment=COLLECT_INTERVAL={{collect_interval_seconds}}
+Environment=KAFKA_TOPIC={{ metrics_kafka_topic }}
+Environment=KAFKA_BROKER={{ kafka_broker }}
 
-ExecStart=/usr/bin/python3 {{ metrics_script_dir }}/{{ metrics_script_name }}
+
+ExecStart={{ metrics_venv_dir }}/bin/python3 {{ metrics_script_dir }}/{{ metrics_script_name }}
 WorkingDirectory={{ metrics_script_dir }}
 
 

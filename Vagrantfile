@@ -42,6 +42,16 @@ Vagrant.configure("2") do |config|
         vm.vm.network "forwarded_port", guest: 9092, host: 9092
       end
 
+      if node[:name] == "infra-db-1"
+        # Elasticsearch
+        vm.vm.network "forwarded_port", guest: 9200, host: 9200, 
+        vm.vm.network "forwarded_port", guest: 9300, host: 9300, 
+      
+        # InfluxDB
+        vm.vm.network "forwarded_port", guest: 8086, host: 8086, 
+        vm.vm.network "forwarded_port", guest: 8088, host: 8088, 
+      end
+
 
       # Provisioning steps
       vm.vm.provision "shell", inline: <<-SHELL

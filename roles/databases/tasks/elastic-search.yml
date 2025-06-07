@@ -1,0 +1,24 @@
+- name: "[ElasticSearch] Ensure Elasticsearch data directory exists"
+  file:
+    path: "{{ es_data_dir }}"
+    state: directory
+    owner: 1000
+    group: 1000
+    mode: '0755'
+  become: true
+
+- name: "[ElasticSearch] Launch Elasticsearch Docker container"
+  docker_container:
+    name: "elasticsearch"
+    image: "{{ docker_image_full }}"
+    state: started
+    restart_policy: unless-stopped
+    env:
+      discovery.type: "single-node"
+      xpack.security.enabled: "false"
+    ports:
+      - "{{ es_http_port }}:9200"
+      - "{{ es_transport_port }}:9300"
+    volumes:
+      - "{{ es_data_dir }}:/usr/share/elasticsearch/data"
+  become: true

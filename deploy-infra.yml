@@ -32,6 +32,7 @@
     - services
     - big_data
     - monitoring
+    - querying
   handlers:
   - name: "Restart Docker"
     import_tasks: "roles/docker/handlers/main.yml"
@@ -42,6 +43,8 @@
   tags:
     - deploy-docker
     - deploy-app
+    - deploy-query-layer
+    - deploy-hdfs-spark
 
 - name: "deploy swarm"
   hosts: services
@@ -54,8 +57,6 @@
 - name: "deploy exporters"
   hosts:
     - services
-  handlers:
-    - import_tasks: "roles/postgres/handlers/main.yml"
   roles:
     - exporters
   tags:
@@ -72,8 +73,12 @@
   tags:
     - deploy-webserver
 
-
-
+- name: "deploy databases for query layer"
+  hosts: querying
+  roles:
+    - databases
+  tags:
+    - deploy-query-layer
 
 - name: "deploy hdfs and spark"
   hosts: big_data
@@ -81,7 +86,6 @@
     - hdfs-spark
   tags:
     - deploy-hdfs-spark
-
 
 
 - name: "deploy app"

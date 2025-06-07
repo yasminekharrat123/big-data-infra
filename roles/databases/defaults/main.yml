@@ -1,0 +1,28 @@
+# ElasticSearch
+es_docker_image: "docker.elastic.co/elasticsearch/elasticsearch"
+es_elasticsearch_version: "8.13.4"
+
+es_data_dir:   "/opt/elasticsearch/data"
+
+es_http_port:      9200
+es_transport_port: 9300
+
+docker_image_full:   "{{ es_docker_image }}:{{ es_elasticsearch_version }}"
+
+
+# InfluxDB
+influxdb:
+  image: "influxdb:2"
+  container_name: "influxdb"
+  host_port: 8086
+  container_port: 8086
+  volume_name: "influxdb-data"
+  data_path: "/var/lib/influxdb2"
+  influx_data_dir: "/opt/influxdb/data"
+
+influxdb_init:
+  username: "admin"
+  password: "secure-password"  
+  org: "fankoush.co"
+  bucket: "system-metrics"
+  admin_token: "secure-token" 

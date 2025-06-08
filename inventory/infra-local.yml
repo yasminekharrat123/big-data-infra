@@ -38,7 +38,7 @@ all:
       hosts:
         "192.168.56.11":
           ansible_host: "{{ansible_ssh_lb}}"
-          ansible_port: 2224
+          ansible_port: 2223
   vars:
     vpc_cidr: "192.168.56.0/24"
     platform_env: "local"

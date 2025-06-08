@@ -3,7 +3,7 @@ from pyspark.sql.functions import from_json, col, avg, last, window
 from pyspark.sql.types import StructType, StringType, DoubleType, TimestampType
 from db.influx_writer import InfluxWriter
 from pydantic import ValidationError
-from schema import Metrics, Alert
+from schema import Metric, Alert
 from db.es_writer import ESWriter
 import yaml
 import os
@@ -104,7 +104,7 @@ def log_batch(df, batch_id):
                 "max_disk": row["max_disk"]
             }
 
-            validated = Metrics(**data)
+            validated = Metric(**data)
 
             # ➤ Write to InfluxDB
             influx_writer.write_metrics(validated)

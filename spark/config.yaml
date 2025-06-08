@@ -17,4 +17,4 @@ elasticsearch:
   user: test
   password: test
   alert_index: "system-alerts"
-  report-index: "daily-reports"
+  report_index: "daily-reports"

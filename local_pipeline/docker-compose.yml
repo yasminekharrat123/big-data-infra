@@ -1,0 +1,180 @@
+services:
+  express:
+    image: ykharrat848/big-data-app:latest
+    ports:
+      - "3000:3000"
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "tcp://0.0.0.0:24224"
+        tag: "application.{{.Name}}"
+    depends_on:
+      - fluentd
+
+  system-metrics:
+    image: system-metrics
+    build:
+      context: ./metrics_collector/
+      dockerfile: Dockerfile
+    environment:
+      - NODE_NAME=local-hp-pc
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=metrics
+      - COLLECT_INTERVAL=10
+    depends_on:
+      - kafka
+
+  fluentd:
+    image: custom-fluentd
+    build: 
+      context: ./fluentd
+      dockerfile: Dockerfile
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
+    environment:
+      - NODE_NAME=local-hp-pc
+      - KAFKA_TOPIC=logs
+      - KAFKA_BROKER=kafka:9092
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    depends_on:
+      - kafka
+
+  kafka:
+      image: apache/kafka
+      container_name: kafka
+      ports:
+        - "9092:9092"
+        - "9093:9093" 
+      environment:
+        KAFKA_NODE_ID: 1
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+        KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+        KAFKA_NUM_PARTITIONS: 1
+
+  kafka-connect:
+    image: custom-kafka-connect
+    build:
+      context: ./kafka-connect
+      dockerfile: Dockerfile
+    container_name: kafka-connect
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./kafka-connect/connect-distributed.properties:/etc/kafka/connect-distributed.properties
+    command: connect-distributed /etc/kafka/connect-distributed.properties
+    environment:
+      - HADOOP_CONF_DIR=/opt/hadoop_conf
+      - HADOOP_USER_NAME=root
+      - CLASSPATH="/opt/hadoop_conf:${CLASSPATH}"
+    depends_on:
+      - kafka
+
+
+  hadoop-master:
+    image: custom-hadoop
+    build: 
+      context: ./custom-hadoop
+      dockerfile: Dockerfile
+    volumes:
+      - ./spark_scripts:/spark_scripts
+      - hadoop_master_data:/hadoop/data
+    container_name: hadoop-master
+    hostname: hadoop-master
+    ports:
+      - "9000:9000"
+      - "9870:9870"
+      - "8088:8088"
+      - "7077:7077"
+      - "16010:16010"
+    tty: true
+    stdin_open: true
+
+  hadoop-worker1:
+    image: custom-hadoop
+    build: 
+      context: ./custom-hadoop
+      dockerfile: Dockerfile
+    container_name: hadoop-worker1
+    hostname: hadoop-worker1
+    volumes:
+      - hadoop_worker1_data:/hadoop/data
+    ports:
+      - "8040:8042"
+      - "9864:9864"
+    tty: true
+    stdin_open: true
+
+  # hadoop-worker2:
+  #   image: liliasfaxi/hadoop-cluster:latest
+  #   container_name: hadoop-worker2
+  #   hostname: hadoop-worker2
+  #   ports:
+  #     - "8041:8042"
+  #   tty: true
+  #   stdin_open: true
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influx
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: myuser
+      DOCKER_INFLUXDB_INIT_PASSWORD: mypassword123
+      DOCKER_INFLUXDB_INIT_ORG: fankoush.co
+      DOCKER_INFLUXDB_INIT_BUCKET: system-metrics
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: mysecretadmintoken
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.1
+    hostname: elasticsearch
+    container_name: elasticsearchCS
+    environment:
+      - discovery.type=single-node 
+      - xpack.security.enabled=false 
+    ports:
+      - '9200:9200' 
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.7.1
+    hostname: kibana
+    container_name: kibanaCS
+    environment:
+      - ELASTICSEARCH_USERNAME=test
+      - ELASTICSEARCH_PASSWORD=test
+      - xpack.security.enabled=false
+      - elasticsearch.hosts=http://elasticsearch:9200 
+    ports:
+      - '5601:5601' 
+    volumes:
+      - kibana_config:/usr/share/kibana/config
+    depends_on:
+      - elasticsearch 
+
+volumes:
+  es_data:
+  influxdb_data:
+  kibana_config:
+  hadoop_master_data:
+  hadoop_worker1_data:

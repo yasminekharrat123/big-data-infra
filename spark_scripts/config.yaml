@@ -1,0 +1,32 @@
+kafka:
+  bootstrap_servers: "kafka:9092"
+  metrics_topic: "metrics"
+  logs_topic: "logs"
+
+influx:
+  url: "http://influxdb:8086"
+  token: "mysecretadmintoken"
+  org:  "fankoush.co"
+  metrics_bucket: "system-metrics"
+  logs_bucket: "system-logs"
+
+elasticsearch:
+  host: elasticsearchCS
+  port: 9200
+  scheme: http
+  user: fankoush
+  password: fankoush
+  metrics_alert_index: "metric-alerts"
+  log_alerts_index: "log-alerts"
+  report_index: "daily-reports"
+
+thresholds:
+  cpu: 100
+  mem: 9000
+  disk: 138
+
+streaming:
+  tumble_interval: 30
+  watermark_interval: 10 
+  minibatch_interval: 5
+  checkpoint_dir: "hdfs://hadoop-master:9000/spark/checkpoints/"

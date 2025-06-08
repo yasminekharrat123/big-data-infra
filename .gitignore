@@ -4,3 +4,6 @@
 
 express-app/node_modules
 express-app/dist
+
+**__pycache__
+**.zip

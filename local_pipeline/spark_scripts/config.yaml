@@ -1,0 +1,38 @@
+kafka:
+  bootstrap_servers: "kafka:9092"
+  metrics_topic: "metrics"
+  logs_topic: "logs"
+
+influx:
+  url: "http://influxdb:8086"
+  token: "mysecretadmintoken"
+  org:  "fankoush.co"
+  metrics_bucket: "system-metrics"
+  logs_bucket: "system-logs"
+
+elasticsearch:
+  host: elasticsearchCS
+  port: 9200
+  scheme: http
+  user: fankoush
+  password: fankoush
+  metrics_alert_index: "metric-alerts"
+  log_alerts_index: "log-alerts"
+  report_index: "daily-reports"
+
+thresholds:
+  cpu: 100 # CPU usage threshold in percentage (0 -> nb_cores * 100)
+  mem: 8000 # Memory usage threshold in MB
+  disk: 140 # Disk usage threshold in GB
+
+streaming:
+  metrics_tumble_interval: 60
+  metrics_watermark_interval: 20
+  metrics_minibatch_interval: 20
+  logs_tumble_interval: 60
+  logs_watermark_interval: 20
+  logs_minibatch_interval: 20
+  checkpoint_dir: "hdfs://hadoop-master:9000/spark/checkpoints/"
+
+batch:
+  hdfs_base_path: "hdfs://hadoop-master:9000/kafka_data"

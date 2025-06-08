@@ -1,0 +1,79 @@
+- name: "[Kafka Connect] Pull Kafka Connect image {{ kafka_connect_image }}"
+  become: true
+  community.docker.docker_image:
+    name: "{{ kafka_connect_image }}"
+    source: pull
+
+- name: "[Kafka Connect] Ensure destination directory exists"
+  become: true
+  file:
+    path: "{{ kafka_connect_properties_dest | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: "[Kafka Connect] Render Kafka Connect properties file"
+  become: true
+  template:
+    src: "{{ kafka_connect_properties_template }}"
+    dest: "{{ kafka_connect_properties_dest }}"
+    mode: '0644'
+
+- name: "[Kafka Connect] Run Kafka Connect container"
+  become: true
+  community.docker.docker_container:
+    name: "{{ kafka_connect_container_name }}"
+    image: "{{ kafka_connect_image }}"
+    published_ports: "{{ kafka_connect_ports }}"
+    volumes: "{{ kafka_connect_volumes }}"
+    command: "{{ kafka_connect_command }}"
+    healthcheck:
+      test: ["NONE"]
+    env:
+      HADOOP_CONF_DIR: "{{ kafka_connect_environment.HADOOP_CONF_DIR }}"
+      CLASSPATH: "{{ kafka_connect_environment.CLASSPATH }}"
+    restart_policy: unless-stopped
+    tty: true
+    detach: true
+
+
+- name: "[Kafka Connect] Ensure directory for connector JSON exists"
+  become: true
+  file:
+    path: "{{ connector_dest_path | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: "[Kafka Connect] Render HDFS sink connector JSON file"
+  become: true
+  template:
+    src: "{{ connector_template_src }}"
+    dest: "{{ connector_dest_path }}"
+    mode: '0644'
+
+- name: "[Kafka Connect] Read connector JSON from remote host"
+  become: true
+  slurp:
+    src: "{{ connector_dest_path }}"
+  register: connector_json_encoded
+
+- name: "[Kafka Connect] Decode and dump connector JSON for debugging"
+  debug:
+    msg: "{{ connector_json_encoded.content | b64decode }}"
+
+- name: "[Kafka Connect] Post HDFS sink connector configuration to Kafka Connect REST API"
+  uri:
+    url: "{{ kafka_connect_rest_url }}"
+    method: POST
+    body: "{{ connector_json_encoded.content | b64decode }}"
+    body_format: json
+    headers:
+      Content-Type: application/json
+    status_code: [200, 201, 409] 
+  register: kafka_connect_post
+  until: kafka_connect_post.status in [200, 201, 409]
+  retries: 8
+  delay: 10
+
+- name: "[Kafka Connect] Show Kafka Connect response"
+  debug:
+    var: kafka_connect_post.json

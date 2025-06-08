@@ -25,5 +25,5 @@ fluentd_kafka_topic: "logs"
 metrics_kafka_topic: "metrics"
 
 
-kafka_broker: "192.168.56.12:9092"
+kafka_broker: "192.168.56.11:9092"
 hdfs_url: "hdfs://192.168.56.30:9000"

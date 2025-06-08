@@ -1,0 +1,17 @@
+kafka_connect_image: ykharrat848/custom-kafka-connect:latest
+kafka_connect_container_name: kafka-connect
+kafka_connect_ports:
+  - "8083:8083"
+kafka_connect_command: connect-distributed /etc/kafka/connect-distributed.properties
+kafka_connect_environment:
+  HADOOP_CONF_DIR: "/opt/hadoop_conf"
+  CLASSPATH: "/opt/hadoop_conf:${CLASSPATH}"
+
+kafka_connect_properties_template: templates/connect-distributed.properties.jinja2
+kafka_connect_properties_dest: "/opt/kafka-connect/connect-distributed.properties"
+kafka_connect_volumes:
+  - "/opt/kafka-connect/connect-distributed.properties:/etc/kafka/connect-distributed.properties"
+
+connector_template_src: "templates/hdfs-sink-connector.json.jinja2"
+connector_dest_path: "/opt/kafka-connect/hdfs-sink-connector.json"
+kafka_connect_rest_url: "http://localhost:8083/connectors"

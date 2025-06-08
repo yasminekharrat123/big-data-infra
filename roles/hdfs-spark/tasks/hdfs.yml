@@ -64,3 +64,23 @@
 - name: "[HDFS] Display Hadoop start output"
   debug:
     var: hadoop_start_result.stdout_lines
+
+- name: "[HDFS] Set permissions on root HDFS directory"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: "hdfs dfs -chmod -R 777 /"
+    tty: true
+
+- name: "[HDFS] Install required Python packages in all containers"
+  become: true
+  vars:
+    containers: "{{ [master_container.name] + (workers | map(attribute='name') | list) }}"
+  loop: "{{ containers }}"
+  loop_control:
+    label: "{{ item }}"
+  community.docker.docker_container_exec:
+    container: "{{ item }}"
+    command: "pip install pydantic pyyaml influxdb-client 'elasticsearch>=8.7.0,<8.8.0'"
+    tty: true
+

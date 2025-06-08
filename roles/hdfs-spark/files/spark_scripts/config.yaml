@@ -1,17 +1,20 @@
 kafka:
-  bootstrap_servers: "kafka:9092"
+  bootstrap_servers: "192.168.56.11:9092"
   metrics_topic: "metrics"
   logs_topic: "logs"
 
 influx:
-  url: "http://influxdb:8086"
-  token: "mysecretadmintoken"
+  url: "http://192.168.56.20:8086" # Infra_db_1
+  token: "secure-token"
+  admin_token: "secure-token" 
   org:  "fankoush.co"
   metrics_bucket: "system-metrics"
   logs_bucket: "system-logs"
+  username: "admin"
+  password: "secure-password"  
 
 elasticsearch:
-  host: elasticsearchCS
+  host: 192.168.56.20 # Infra_db_1
   port: 9200
   scheme: http
   user: fankoush
@@ -32,7 +35,7 @@ streaming:
   logs_tumble_interval: 60
   logs_watermark_interval: 20
   logs_minibatch_interval: 20
-  checkpoint_dir: "hdfs://hadoop-master:9000/spark/checkpoints/"
+  checkpoint_dir: "hdfs://192.168.56.30:9000/spark/checkpoints/"
 
 batch:
-  hdfs_base_path: "hdfs://hadoop-master:9000/kafka_data"
+  hdfs_base_path: "hdfs://192.168.56.30:9000/kafka_data"

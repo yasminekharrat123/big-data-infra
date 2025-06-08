@@ -9,6 +9,9 @@ import yaml
 
 from initialize import initialize_sinks
 
+from logger import get_logger
+logger = get_logger(__name__)
+
 # === Load config ===
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
@@ -19,11 +22,10 @@ MEM_THRESHOLD = config["thresholds"]["mem"]
 DISK_THRESHOLD = config["thresholds"]["disk"]
 es_config = config["elasticsearch"]
 streaming_config = config["streaming"]
-
-
 # Checkpoint dir
 checkpoint_dir = streaming_config["checkpoint_dir"]
 
+logger.info("Loaded configuration successfully.")
 
 
 metrics_alert_mapping = {
@@ -37,15 +39,14 @@ metrics_alert_mapping = {
     }
 }
 
-print("--- Initializing Data Sinks for Metrics Processor ---")
+logger.info("Initializing Data Sinks for Metrics Processor")
 initialize_sinks(
     config=config,
     bucket_name=config["influx"]["metrics_bucket"],
     index_name=config["elasticsearch"]["metrics_alert_index"],
     index_mapping=metrics_alert_mapping
 )
-print("--- Initialization Complete ---")
-
+logger.info("Initialization Complete")
 
 
 # === Define Spark schema ===
@@ -77,6 +78,7 @@ stream = (
          .option("startingOffsets", "latest")
          .load()
 )
+
 # === Parse JSON ===
 parsed = (
     stream
@@ -88,9 +90,9 @@ parsed = (
 # === Tumbling window aggregation ===
 tumbling = (
     parsed
-    .withWatermark("timestamp", f"{streaming_config['watermark_interval']} seconds")
+    .withWatermark("timestamp", f"{streaming_config['metrics_watermark_interval']} seconds")
     .groupBy(
-        window(col("timestamp"), f"{streaming_config['tumble_interval']} seconds"),
+        window(col("timestamp"), f"{streaming_config['metrics_tumble_interval']} seconds"),
         col("host")
     )
     .agg(
@@ -141,55 +143,71 @@ def build_alerts(validated):
         })
     return alerts
 
+
 def process_and_write_batch(df, batch_id):
+    logger.info(f"--- Processing Batch ID: {batch_id} ---")
     if df.rdd.isEmpty():
+        logger.info(f"Batch ID: {batch_id} is empty. Skipping.")
         return
 
     # This function will run on each executor for its partition of data
     def write_partition(partition_of_rows):
-        # A single InfluxDB client is created per executor task
-        influx_writer = InfluxWriter(
-            url=config["influx"]["url"],
-            token=config["influx"]["token"],
-            org=config["influx"]["org"],
-            bucket=config["influx"]["metrics_bucket"]
-        )
+        partition_logger = get_logger(__name__)
 
-        es_writer = ESWriter(
-            host=es_config["host"],
-            port=es_config["port"],
-            scheme=es_config.get("scheme", "http"),
-            user=es_config.get("user"),
-            password=es_config.get("password"),
-            index=es_config["metrics_alert_index"],
-        )
+        try:
+            influx_writer = InfluxWriter(
+                url=config["influx"]["url"],
+                token=config["influx"]["token"],
+                org=config["influx"]["org"],
+                bucket=config["influx"]["metrics_bucket"]
+            )
+
+            es_writer = ESWriter(
+                host=es_config["host"],
+                port=es_config["port"],
+                scheme=es_config.get("scheme", "http"),
+                user=es_config.get("user"),
+                password=es_config.get("password"),
+                index=es_config["metrics_alert_index"],
+            )
+        except Exception as e:
+            partition_logger.error("Failed to initialize data writers on executor.", exc_info=True)
+            return
 
         alerts = []
         validated_data = []
 
         for row in partition_of_rows:
-            # Convert row to Pydantic model for validation
-            data = {
-                "timestamp": row["window"].start.isoformat(), 
-                "host": row["host"],
-                "avg_cpu": row["avg_cpu"], "avg_mem": row["avg_mem"], "avg_disk": row["avg_disk"],
-                "max_cpu": row["max_cpu"], "max_mem": row["max_mem"], "max_disk": row["max_disk"]
-            }
-            validated = Metrics(**data)
-            validated_data.append(validated)
-            alerts.extend(build_alerts(validated))
-        
+            try:
+                # Convert row to Pydantic model for validation
+                data = {
+                    "timestamp": row["window"].start.isoformat(),
+                    "host": row["host"],
+                    "avg_cpu": row["avg_cpu"], "avg_mem": row["avg_mem"], "avg_disk": row["avg_disk"],
+                    "max_cpu": row["max_cpu"], "max_mem": row["max_mem"], "max_disk": row["max_disk"]
+                }
+                validated = Metrics(**data)
+                validated_data.append(validated)
+                alerts.extend(build_alerts(validated))
+            except Exception as e:
+                partition_logger.error(f"Failed to validate or process row: {row}", exc_info=True)
+
         # Write the entire list of points for this partition in one network call
         try:
-            influx_writer.write_metrics(validated_data)
-            es_writer.write_alerts_batch(alerts)
-            print(f"✅ Successfully processed batch with {len(validated_data)} metrics and {len(alerts)} alerts.")
+            if validated_data:
+                influx_writer.write_metrics(validated_data)
+            if alerts:
+                es_writer.write_alerts_batch(alerts)
+            
+            if validated_data or alerts:
+                partition_logger.info(f"Successfully wrote {len(validated_data)} metrics and {len(alerts)} alerts for this partition.")
+            
         except Exception as e:
-            print(f"❌ Failed to write data: {e}")
+            partition_logger.error("Failed to write data partition to sinks.", exc_info=True)
 
     # Apply the write function to each partition in parallel
     df.foreachPartition(write_partition)
-
+    logger.info(f"--- Finished Processing Batch ID: {batch_id} ---")
 
 
 
@@ -200,10 +218,11 @@ query = (
     .outputMode("update")
     .foreachBatch(process_and_write_batch)
     .option("checkpointLocation", checkpoint_dir + "/metrics_streaming")
-    .trigger(processingTime=f"{streaming_config['minibatch_interval']} seconds")
+    .trigger(processingTime=f"{streaming_config['metrics_minibatch_interval']} seconds")
     .start()
 )
 
+logger.info("Streaming query started. Waiting for data from Kafka...")
 
 
 

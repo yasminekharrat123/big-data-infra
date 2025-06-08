@@ -21,12 +21,18 @@ elasticsearch:
   report_index: "daily-reports"
 
 thresholds:
-  cpu: 100
-  mem: 9000
-  disk: 138
+  cpu: 100 # CPU usage threshold in percentage (0 -> nb_cores * 100)
+  mem: 8000 # Memory usage threshold in MB
+  disk: 140 # Disk usage threshold in GB
 
 streaming:
-  tumble_interval: 30
-  watermark_interval: 10 
-  minibatch_interval: 5
+  metrics_tumble_interval: 60
+  metrics_watermark_interval: 20
+  metrics_minibatch_interval: 20
+  logs_tumble_interval: 60
+  logs_watermark_interval: 20
+  logs_minibatch_interval: 20
   checkpoint_dir: "hdfs://hadoop-master:9000/spark/checkpoints/"
+
+batch:
+  hdfs_base_path: "hdfs://hadoop-master:9000/kafka_data"

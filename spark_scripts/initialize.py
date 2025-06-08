@@ -1,11 +1,8 @@
-import logging
 from influxdb_client import InfluxDBClient
 from elasticsearch import Elasticsearch, ConnectionError
+from logger import get_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - [Initializer] - %(message)s'
-)
+logging = get_logger(__name__)
 
 def initialize_sinks(config: dict, bucket_name: str = None, index_name: str = None, index_mapping: dict = None):
 

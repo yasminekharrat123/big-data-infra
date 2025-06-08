@@ -8,7 +8,8 @@ from schema import  Log
 from initialize import initialize_sinks
 
 
-
+from logger import get_logger
+logger = get_logger(__name__)
 
 # === Load config ===
 with open("config.yaml", "r") as f:
@@ -17,6 +18,7 @@ streaming_config = config["streaming"]
 es_config = config["elasticsearch"]
 influx_config = config["influx"]
 kafka_config = config["kafka"]
+logger.info("Configuration loaded successfully for Log Processor.")
 
 
 
@@ -32,14 +34,14 @@ logs_alert_mapping = {
 }
 
 
-print("--- Initializing Data Sinks for Log Stream Processor ---")
+logger.info("--- Initializing Data Sinks for Log Stream Processor ---")
 initialize_sinks(
     config=config,
     bucket_name=config["influx"]["logs_bucket"],
     index_name=config["elasticsearch"]["log_alerts_index"],
     index_mapping=logs_alert_mapping
 )
-print("--- Initialization Complete ---")
+logger.info("--- Initialization Complete ---")
 
 
 
@@ -71,6 +73,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("ERROR")
+logger.info("Spark session created successfully.")
 
 stream = (
     spark.readStream
@@ -107,16 +110,19 @@ df_final = df_final.withColumn(
 )
 
 # === Aggregated status counts ===
-status_counts = df_final.withWatermark("timestamp", "10 seconds").groupBy(
-    window(col("timestamp"), "15 seconds"),
+status_counts = df_final.withWatermark("timestamp", f"{streaming_config['logs_watermark_interval']} seconds").groupBy(
+    window(col("timestamp"), f"{streaming_config["logs_tumble_interval"]} seconds"),
     col("status_category")
 ).count()
 
 def process_aggregated_logs_batch(df, batch_id):
+    logger.info(f"--- Processing Aggregated Logs Batch ID: {batch_id} ---")
     if df.rdd.isEmpty():
+        logger.info(f"Batch ID: {batch_id} is empty. Skipping.")
         return
 
     def write_partition(partition_of_rows):
+        partition_logger = get_logger(__name__)
         influx_writer = InfluxWriter(
             url=influx_config["url"], token=influx_config["token"],
             org=influx_config["org"], bucket=influx_config["logs_bucket"]
@@ -125,7 +131,6 @@ def process_aggregated_logs_batch(df, batch_id):
         logs_to_write = []
 
         for row in partition_of_rows:
-            # Prepare data for InfluxDB
             validated_log = Log(
                 timestamp=row["window"].start.isoformat(),
                 status_category=row["status_category"],
@@ -133,13 +138,12 @@ def process_aggregated_logs_batch(df, batch_id):
             )
             logs_to_write.append(validated_log)
         
-        # Perform bulk writes
         try:
             if logs_to_write:
                 influx_writer.write_logs(logs_to_write)
-            print(f"✅ Processed aggregated batch: {len(logs_to_write)} log counts")
+                partition_logger.info(f"Successfully wrote {len(logs_to_write)} aggregated log counts for this partition.")
         except Exception as e:
-            print(f"❌ Failed to write aggregated batch data: {e}")
+            partition_logger.error("Failed to write aggregated batch data partition.", exc_info=True)
 
     df.foreachPartition(write_partition)
 
@@ -149,7 +153,7 @@ query_aggregated = (
     .outputMode("update")
     .foreachBatch(process_aggregated_logs_batch)
     .option("checkpointLocation", f"{checkpoint_dir}/aggregated_logs")
-    .trigger(processingTime=f"{streaming_config['minibatch_interval']} seconds")
+    .trigger(processingTime=f"{streaming_config['logs_minibatch_interval']} seconds")
     .start()
 )
 
@@ -157,10 +161,13 @@ query_aggregated = (
 non_2xx_logs_df = df_final.filter((col("status") < 200) | (col("status") >= 300))
 
 def process_individual_alerts_batch(df, batch_id):
+    logger.info(f"--- Processing Individual Alerts Batch ID: {batch_id} ---")
     if df.rdd.isEmpty():
+        logger.info(f"Batch ID: {batch_id} is empty. Skipping.")
         return
 
     def write_partition(partition_of_rows):
+        partition_logger = get_logger(__name__)
         es_writer = ESWriter(
             host=es_config["host"], port=es_config["port"], scheme=es_config.get("scheme", "http"),
             user=es_config.get("user"), password=es_config.get("password"),
@@ -185,9 +192,9 @@ def process_individual_alerts_batch(df, batch_id):
         try:
             if alerts_to_write:
                 es_writer.write_alerts_batch(alerts_to_write)
-            print(f"✅ Processed individual alert batch with {len(alerts_to_write)} alerts.")
+                partition_logger.info(f"Successfully wrote {len(alerts_to_write)} individual alerts for this partition.")
         except Exception as e:
-            print(f"❌ Failed to write individual alert batch data: {e}")
+            partition_logger.error("Failed to write individual alert batch data partition.", exc_info=True)
     
     df.foreachPartition(write_partition)
 
@@ -196,10 +203,12 @@ query_individual_alerts = (
     .foreachBatch(process_individual_alerts_batch)
     .outputMode("append")
     .option("checkpointLocation", checkpoint_dir + "/individual_alerts")
-    .trigger(processingTime=f"{streaming_config['minibatch_interval']} seconds")
+    .trigger(processingTime=f"{streaming_config['logs_minibatch_interval']} seconds")
     .start()
 )
 
+
+logger.info("Streaming queries for aggregated logs and individual alerts have started. Waiting for data...")
 
 
 # === Await termination ===

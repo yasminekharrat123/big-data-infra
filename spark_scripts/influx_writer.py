@@ -1,23 +1,40 @@
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client.client.exceptions import InfluxDBError
+
+from logger import get_logger
+logger = get_logger(__name__)
 
 class InfluxWriter:
     def __init__(self, url, token, org, bucket):
-        self.client = InfluxDBClient(
-            url=url,
-            token=token,
-            org=org
-        )
-        print("InfluxDB Connected:", self.client.ping())
-        self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
-        self.bucket = bucket
-        self.org = org
+        try:
+            self.client = InfluxDBClient(
+                url=url,
+                token=token,
+                org=org
+            )
+            if not self.client.ping():
+                raise ConnectionError("InfluxDB connection failed: ping was unsuccessful.")
+            
+            logger.info("InfluxDB client initialized and connection verified.")
+            self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
+            self.bucket = bucket
+            self.org = org
+        except Exception as e:
+            logger.error("Failed to initialize InfluxDB client.", exc_info=True)
+            raise e
 
     def write_points_batch(self, points):
         if not points:
+            logger.warning("Attempted to write an empty list of points to InfluxDB. No action taken.")
             return 0
-        self.write_api.write(bucket=self.bucket, org=self.org, record=points)
-        return len(points)
+        try:
+            self.write_api.write(bucket=self.bucket, org=self.org, record=points)
+            logger.info(f"Successfully wrote {len(points)} points to InfluxDB bucket '{self.bucket}'.")
+            return len(points)
+        except InfluxDBError as e:
+            logger.error(f"Failed to write batch to InfluxDB bucket '{self.bucket}'.", exc_info=True)
+            return 0
     
     def write_metrics(self, validated_metrics):
         points = []
@@ -36,11 +53,7 @@ class InfluxWriter:
                                 .field("allocated", metrics.max_disk)
                                 .time(metrics.timestamp, WritePrecision.NS),
             ])
-        num_written = self.write_points_batch(points)
-        if num_written == 0:
-            print("⚠️ No points written to InfluxDB.")
-        else:
-            print(f"✅ Successfully wrote {num_written} points to InfluxDB.")
+        self.write_points_batch(points)
         
     def write_logs(self, validated_logs):
         points = []
@@ -53,5 +66,4 @@ class InfluxWriter:
             )
             points.append(point)
 
-        num_written = self.write_points_batch(points)
-        print(f"✅ Successfully wrote {num_written} log points to InfluxDB.")
+        self.write_points_batch(points)

@@ -1,0 +1,21 @@
+{
+  "name": "hdfs-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.hdfs3.Hdfs3SinkConnector",
+    "tasks.max": "1",
+    "topics": "{{ fluentd_kafka_topic }},{{ metrics_kafka_topic }}",
+    "format.class": "io.confluent.connect.hdfs3.json.JsonFormat",
+    "hdfs.url": "{{ hdfs_url }}",
+    "topics.dir": "/kafka_data",
+    "partitioner.class": "io.confluent.connect.storage.partitioner.TimeBasedPartitioner",
+    "partition.duration.ms": "86400000",
+    "hadoop.conf.dir": "/opt/hadoop_conf",
+    "path.format": "YYYY/MM/dd",
+    "timestamp.extractor": "Record",
+    "locale": "en-US",
+    "timezone": "UTC",
+    "flush.size": "100",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false" 
+  }
+}

@@ -1,4 +1,10 @@
-- name: Run Kafka Docker container
+- name: "[KAFKA] Pull Kafka image"
+  docker_image:
+    name: "{{ kafka.image }}"
+    source: pull
+  become: true
+
+- name: "[KAFKA] Run Kafka Docker container"
   docker_container:
     name: "{{ kafka.container_name }}"
     image: "{{ kafka.image }}"
@@ -7,3 +13,4 @@
     ports: "{{ kafka.ports }}"
     env: "{{ kafka.environment }}"
   become: true
+

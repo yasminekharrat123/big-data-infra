@@ -4,7 +4,7 @@ import yaml
 
 
 # === Load config ===
-with open("config.yaml", "r") as f:
+with open("../config.yaml", "r") as f:
     config = yaml.safe_load(f)
 # InfluxDB details
 INFLUX_URL = config["influx"]["url"]

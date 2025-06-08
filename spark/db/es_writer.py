@@ -4,7 +4,7 @@ import yaml
 import uuid
 
 # === Load config ===
-with open("config.yaml", "r") as f:
+with open("../config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 # Elasticsearch config

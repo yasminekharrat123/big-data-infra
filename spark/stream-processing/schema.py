@@ -1,6 +1,7 @@
 from pydantic import BaseModel
+from typing import Optional, Dict
 
-class Metrics(BaseModel):
+class Metric(BaseModel):
     timestamp: str
     host: str
     avg_cpu: float
@@ -16,8 +17,17 @@ class Alert(BaseModel):
     metadata: dict
     
     
-class Logs(BaseModel):
+class Log(BaseModel):
     timestamp: str
     status_category: str
     count: int
-    
+
+class RawLog(BaseModel): 
+    timestamp: str
+    method: str
+    url: str
+    status: int
+    contentLength: Optional[str]
+    params: Optional[Dict[str, str]]
+    response: Optional[Dict[str, str]]
+    error: Optional[str]

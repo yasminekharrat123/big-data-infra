@@ -1,3 +1,10 @@
+- name: "[HDFS] Zip spark_scripts into app.zip"
+  archive:
+    path: "{{ role_path }}/files/spark_scripts/"
+    dest: "{{ role_path }}/files/spark_scripts/app.zip"
+    format: zip
+  delegate_to: localhost
+
 - name: "[HDFS] Ensure Docker network '{{ hadoop_network }}' exists"
   become: true
   community.docker.docker_network:
@@ -11,11 +18,34 @@
     name: "{{ hadoop_image }}"
     source: pull
 
+- name: "Prepare Spark scripts on Docker host"
+  become: true
+  block:
+
+    - name: "Ensure /spark_scripts exists on the host"
+      ansible.builtin.file:
+        path: /spark_scripts
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: "Copy Spark scripts to Docker host"
+      become: true
+      ansible.builtin.copy:
+        src: spark_scripts/
+        dest: /spark_scripts/
+        mode: '0644'
+        owner: root
+        group: root
+
 - name: "[HDFS] Run Hadoop master container"
   become: true
   community.docker.docker_container:
     name: "{{ master_container.name }}"
     hostname: "{{ master_container.hostname }}"
+    volumes:
+      - "/spark_scripts:/spark_scripts:rw"
     image: "{{ hadoop_image }}"
     networks:
       - name: "{{ hadoop_network }}"
@@ -24,6 +54,17 @@
     interactive: true
     tty: true
     restart_policy: unless-stopped
+
+- name: "Debug: List /spark_scripts inside container"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: "ls -l /spark_scripts"
+  register: ls_scripts
+  changed_when: false
+
+- debug:
+    var: ls_scripts.stdout_lines
 
 - name: "[HDFS] Run Hadoop worker containers"
   become: true

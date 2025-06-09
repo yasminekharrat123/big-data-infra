@@ -1,0 +1,41 @@
+kafka:
+  bootstrap_servers: "192.168.56.11:9092"
+  metrics_topic: "metrics"
+  logs_topic: "logs"
+
+influx:
+  url: "http://192.168.56.20:8086" # Infra_db_1
+  token: "secure-token"
+  admin_token: "secure-token" 
+  org:  "fankoush.co"
+  metrics_bucket: "system-metrics"
+  logs_bucket: "system-logs"
+  username: "admin"
+  password: "secure-password"  
+
+elasticsearch:
+  host: 192.168.56.20 # Infra_db_1
+  port: 9200
+  scheme: http
+  user: fankoush
+  password: fankoush
+  metrics_alert_index: "metric-alerts"
+  log_alerts_index: "log-alerts"
+  report_index: "daily-reports"
+
+thresholds:
+  cpu: 100 # CPU usage threshold in percentage (0 -> nb_cores * 100)
+  mem: 8000 # Memory usage threshold in MB
+  disk: 140 # Disk usage threshold in GB
+
+streaming:
+  metrics_tumble_interval: 60
+  metrics_watermark_interval: 20
+  metrics_minibatch_interval: 20
+  logs_tumble_interval: 60
+  logs_watermark_interval: 20
+  logs_minibatch_interval: 20
+  checkpoint_dir: "hdfs://192.168.56.30:9000/spark/checkpoints/"
+
+batch:
+  hdfs_base_path: "hdfs://192.168.56.30:9000/kafka_data"

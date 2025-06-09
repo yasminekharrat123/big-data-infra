@@ -1,3 +1,12 @@
+- name: "[SPARK] Ensure zip utility is installed in master container"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc "apt-get update &&
+                DEBIAN_FRONTEND=noninteractive apt-get install -y zip"
+    tty: true
+
 - name: "[SPARK] Create flat spark-libs.zip inside container"
   community.docker.docker_container_exec:
     container: "{{ master_container.name }}"
@@ -7,6 +16,13 @@
         zip -j /tmp/spark-libs.zip *.jar
       '
   become: true
+
+- name: "[HDFS] Ensure /spark directory exists in HDFS"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc "hdfs dfs -mkdir -p /spark"
 
 - name: "[SPARK] Ensure spark.yarn.archive is set in spark-defaults.conf"
   community.docker.docker_container_exec:
@@ -46,23 +62,113 @@
   failed_when: zip_check.rc != 0
   become: true
 
-- name: "[DEBUG] Show first lines of spark-libs.zip contents"
-  debug:
-    msg: "{{ zip_check.stdout_lines }}"
+# - name: "[DEBUG] Show first lines of spark-libs.zip contents"
+#   debug:
+#     msg: "{{ zip_check.stdout_lines }}"
 
-- name: "[SPARK] Verify spark-shell can start with YARN archive"
+# - name: "[SPARK] Verify spark-shell can start with YARN archive"
+#   community.docker.docker_container_exec:
+#     container: "{{ master_container.name }}"
+#     command: >
+#       bash -lc '
+#         spark-shell \
+#           --conf spark.yarn.archive=hdfs:///spark/spark-libs.zip
+#       '
+#   register: spark_shell_check
+#   changed_when: false
+#   failed_when: spark_shell_check.rc != 0
+#   become: true
+
+# - name: "[SPARK] Show spark-shell startup output"
+#   debug:
+#     msg: "{{ spark_shell_check.stdout_lines[0:5] }}"
+- name: "[Spark] Submit metrics_streaming job"
+  become: true
   community.docker.docker_container_exec:
     container: "{{ master_container.name }}"
     command: >
-      bash -lc '
-        spark-shell \
-          --conf spark.yarn.archive=hdfs:///spark/spark-libs.zip
-      '
-  register: spark_shell_check
-  changed_when: false
-  failed_when: spark_shell_check.rc != 0
-  become: true
+      spark-submit
+      --master yarn
+      --deploy-mode cluster
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0
+      --py-files /spark_scripts/app.zip
+      --num-executors 1
+      --conf spark.yarn.am.memory=256m
+      --conf spark.yarn.am.memoryOverhead=64m
+      metrics_streaming.py
+    chdir: /spark_scripts
+    detach: true
 
-- name: "[SPARK] Show spark-shell startup output"
-  debug:
-    msg: "{{ spark_shell_check.stdout_lines[0:5] }}"
+- name: "[Spark] Submit logs_streaming job"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      spark-submit
+      --master yarn
+      --deploy-mode cluster
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0
+      --py-files /spark_scripts/app.zip
+      --num-executors 1
+      --conf spark.yarn.am.memory=256m
+      --conf spark.yarn.am.memoryOverhead=64m
+      logs_streaming.py
+    chdir: /spark_scripts
+    detach: true
+
+- name: "[Spark] Submit batch_job"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      spark-submit
+      --master yarn
+      --deploy-mode cluster 
+      --py-files /spark_scripts/app.zip
+      --num-executors 1
+      --conf spark.yarn.am.memory=256m
+      --conf spark.yarn.am.memoryOverhead=64m
+      batch_job.py
+    chdir: /spark_scripts
+    detach: true
+
+- name: "[Spark] Ensure cron package is installed in master container"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cron"
+    tty: true
+
+- name: "[Spark] Create /etc/cron.d/spark_batch for daily 10AM run"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: >
+      bash -lc "printf '%s\n' \
+      '0 10 * * * root cd /spark_scripts && \
+        spark-submit \
+          --master yarn \
+          --deploy-mode cluster \
+          --py-files /spark_scripts/app.zip \
+          --num-executors 1 \
+          --conf spark.yarn.am.memory=256m \
+          --conf spark.yarn.am.memoryOverhead=64m \
+          batch_job.py >> /var/log/spark_batch.log 2>&1' \
+      > /etc/cron.d/spark_batch"
+    tty: true
+
+- name: "[Spark] Set correct permissions on cron definition"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: "chmod 0644 /etc/cron.d/spark_batch"
+    tty: true
+
+- name: "[Spark] Reload cron daemon so the new job is recognized"
+  become: true
+  community.docker.docker_container_exec:
+    container: "{{ master_container.name }}"
+    command: "service cron reload"
+    tty: true
+

@@ -2,7 +2,7 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client.client.exceptions import InfluxDBError
 
-from logger import get_logger
+from .my_logger import get_logger
 logger = get_logger(__name__)
 
 class InfluxWriter:

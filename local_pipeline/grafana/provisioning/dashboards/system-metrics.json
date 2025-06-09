@@ -1,0 +1,148 @@
+{
+  "uid": "system-overview",
+  "title": "System Overview Dashboard",
+  "timezone": "browser",
+  "schemaVersion": 37,
+  "version": 2,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "CPU Usage (avg)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 9 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb_metrics" },
+          "query": "from(bucket: \"system-metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"cpu_usage\" and r._field == \"value\")"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage (avg)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 9 },
+      "targets": [
+      {
+        "refId": "B",
+        "datasource": { "type": "influxdb", "uid": "influxdb_metrics" },
+        "query": "from(bucket: \"system-metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"mem_usage\" and r._field == \"value\")"
+      }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Mb" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Usage (avg)",
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 9 },
+      "targets": [
+      {
+        "refId": "C",
+        "datasource": { "type": "influxdb", "uid": "influxdb_metrics" },
+        "query": "from(bucket: \"system-metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"disk_usage\" and r._field == \"value\")"
+      }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Gb" } }
+    },
+    {
+      "type": "barchart",
+      "title": "Log Categories (Count)",
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 9 },
+      "targets": [
+        {
+          "refId": "D",
+          "datasource": { "type": "influxdb", "uid": "influxdb_logs" },
+          "query": "from(bucket: \"system-logs\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"log_status_counts\" and r._field == \"count\")"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Daily Report - Hosts Overview",
+      "gridPos": { "x": 0, "y": 18, "w": 24, "h": 10 },
+      "targets": [
+        {
+          "refId": "E",
+          "datasource": { "type": "elasticsearch", "uid": "es_reports" },
+          "timeField": "timestamp",
+          "query": "*",
+          "bucketAggs": [
+            {
+              "id": "1",
+              "type": "terms",
+              "field": "host.keyword",
+              "settings": {
+                "size": 10,
+                "order": "desc",
+                "orderBy": "_term"
+              }
+            }
+          ],
+          "metrics": [
+            { "id": "2", "type": "avg", "field": "avg_cpu" ,"alias": "Average CPU usage" },
+            { "id": "3", "type": "avg", "field": "avg_mem" ,"alias": "Average Mem usage" },
+            { "id": "4", "type": "avg", "field": "avg_disk","alias": "Average Disk usage" },
+            { "id": "5", "type": "avg", "field": "stddev_cpu","alias": "CPU Standard deviation" },
+            { "id": "6", "type": "avg", "field": "stddev_mem","alias": "MEM Standard deviation" },
+            { "id": "7", "type": "avg", "field": "stddev_disk", "alias": "Disk Standard deviation" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Log Alerts (Elasticsearch Histogram)",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "F",
+          "datasource": { "type": "elasticsearch", "uid": "es_log_alerts" },
+          "timeField": "timestamp",
+          "query": "*",
+          "bucketAggs": [
+            {
+              "id": "1",
+              "type": "date_histogram",
+              "field": "timestamp",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": 0
+              }
+            }
+          ],
+          "metrics": [
+            { "id": "2", "type": "count" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Metric Alerts (Elasticsearch Histogram)",
+      "gridPos": { "x": 0, "y": 44, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "M",
+          "datasource": { "type": "elasticsearch", "uid": "es_metric_alerts" },
+          "timeField": "timestamp",
+          "query": "*",
+          "bucketAggs": [
+            {
+              "id": "1",
+              "type": "date_histogram",
+              "field": "timestamp",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": 0
+              }
+            }
+          ],
+          "metrics": [
+            { "id": "2", "type": "count" }
+          ]
+        }
+      ]
+    }
+  ]
+}

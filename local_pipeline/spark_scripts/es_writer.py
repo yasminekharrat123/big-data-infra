@@ -1,8 +1,8 @@
 from elasticsearch import Elasticsearch, helpers
 import uuid
 
-from schema import DailyReport
-from logger import get_logger
+from .schema import DailyReport
+from .my_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -66,18 +66,45 @@ class ESWriter:
             logger.error(f"An Elasticsearch error occurred during bulk write to '{self.index}'.", exc_info=True)
             return 0
 
-    def write_report(self, report: DailyReport):
-        """Writes a single daily report document to Elasticsearch."""
-        try:
-            report_dict = report.model_dump(mode="json")
-            report_id = report.timestamp
+    # def write_report(self, report: DailyReport):
+    #     """Writes a single daily report document to Elasticsearch."""
+    #     try:
+    #         report_dict = report.model_dump(mode="json")
+    #         report_id = report.timestamp
 
-            self.client.index(
-                index=self.index,
-                id=report_id,
-                document=report_dict
-            )
-            logger.info(f"Successfully wrote daily report for '{report_id}' to index '{self.index}'.")
+    #         self.client.index(
+    #             index=self.index,
+    #             id=report_id,
+    #             document=report_dict
+    #         )
+    #         logger.info(f"Successfully wrote daily report for '{report_id}' to index '{self.index}'.")
+    #     except Exception as e:
+    #         logger.error(f"Failed to write daily report for '{report.date}' to index '{self.index}'.", exc_info=True)
+    #         raise
+    def write_report(self, report: DailyReport):
+        """Writes one flattened document per host in the daily report."""
+        try:
+            for host, host_data in report.host_reports.items():
+                flat_doc = {
+                    "timestamp": report.timestamp,
+                    "host": host,
+                    "avg_cpu": host_data.avg_cpu,
+                    "avg_mem": host_data.avg_mem,
+                    "avg_disk": host_data.avg_disk,
+                    "stddev_cpu": host_data.stddev_cpu,
+                    "stddev_mem": host_data.stddev_mem,
+                    "stddev_disk": host_data.stddev_disk,
+                    "max_cpu": host_data.max_cpu,
+                    "max_mem": host_data.max_mem,
+                    "max_disk": host_data.max_disk,
+                }
+                doc_id = f"{report.timestamp}_{host}"
+                self.client.index(
+                    index=self.index,
+                    id=doc_id,
+                    document=flat_doc
+                )
+            logger.info(f"✅ Flattened daily report written to index '{self.index}'")
         except Exception as e:
-            logger.error(f"Failed to write daily report for '{report.date}' to index '{self.index}'.", exc_info=True)
+            logger.error("❌ Failed to write flattened daily report", exc_info=True)
             raise

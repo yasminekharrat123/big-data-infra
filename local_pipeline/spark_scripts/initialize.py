@@ -1,6 +1,6 @@
 from influxdb_client import InfluxDBClient
 from elasticsearch import Elasticsearch, ConnectionError
-from logger import get_logger
+from .my_logger import get_logger
 
 logging = get_logger(__name__)
 

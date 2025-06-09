@@ -11,7 +11,6 @@ class Metrics(BaseModel):
     max_cpu: float
     max_mem: float
     max_disk: float
-    
 
 class Alert(BaseModel):
     content: str

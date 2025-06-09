@@ -8,7 +8,7 @@ from schema import  Log
 from initialize import initialize_sinks
 
 
-from logger import get_logger
+from .my_logger import get_logger
 logger = get_logger(__name__)
 
 # === Load config ===

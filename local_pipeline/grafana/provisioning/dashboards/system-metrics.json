@@ -14,7 +14,7 @@
         {
           "refId": "A",
           "datasource": { "type": "influxdb", "uid": "influxdb_metrics" },
-          "query": "from(bucket: \"system-metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"cpu_usage\" and r._field == \"value\")"
+          "query": "from(bucket: \"system-metrics\") |> range(start: -48h) |> filter(fn: (r) => r._measurement == \"cpu_usage\" and r._field == \"value\")"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "percent" } }
@@ -27,7 +27,7 @@
       {
         "refId": "B",
         "datasource": { "type": "influxdb", "uid": "influxdb_metrics" },
-        "query": "from(bucket: \"system-metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"mem_usage\" and r._field == \"value\")"
+        "query": "from(bucket: \"system-metrics\") |> range(start: -48h) |> filter(fn: (r) => r._measurement == \"mem_usage\" and r._field == \"value\")"
       }
       ],
       "fieldConfig": { "defaults": { "unit": "Mb" } }
@@ -40,7 +40,7 @@
       {
         "refId": "C",
         "datasource": { "type": "influxdb", "uid": "influxdb_metrics" },
-        "query": "from(bucket: \"system-metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"disk_usage\" and r._field == \"value\")"
+        "query": "from(bucket: \"system-metrics\") |> range(start: -48h) |> filter(fn: (r) => r._measurement == \"disk_usage\" and r._field == \"value\")"
       }
       ],
       "fieldConfig": { "defaults": { "unit": "Gb" } }
@@ -85,64 +85,198 @@
             { "id": "4", "type": "avg", "field": "avg_disk","alias": "Average Disk usage" },
             { "id": "5", "type": "avg", "field": "stddev_cpu","alias": "CPU Standard deviation" },
             { "id": "6", "type": "avg", "field": "stddev_mem","alias": "MEM Standard deviation" },
-            { "id": "7", "type": "avg", "field": "stddev_disk", "alias": "Disk Standard deviation" }
+            { "id": "7", "type": "avg", "field": "stddev_disk", "alias": "Disk Standard deviation" },
+            { "id": "8", "type": "avg", "field": "status_counts_2xx", "alias": "200 OK" },
+            { "id": "9", "type": "avg", "field": "status_counts_3xx", "alias": "300" },
+            { "id": "10", "type": "avg", "field": "status_counts_4xx", "alias": "400 ERR" },
+            { "id": "11", "type": "avg", "field": "status_counts_5xx", "alias": "500 ERR" },
+            { "id": "12", "type": "avg", "field": "status_counts_unknown", "alias": "unknown Error" }
+            
           ]
         }
       ]
     },
     {
-      "type": "table",
-      "title": "Log Alerts (Elasticsearch Histogram)",
-      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
-      "targets": [
-        {
-          "refId": "F",
-          "datasource": { "type": "elasticsearch", "uid": "es_log_alerts" },
-          "timeField": "timestamp",
-          "query": "*",
-          "bucketAggs": [
-            {
-              "id": "1",
-              "type": "date_histogram",
-              "field": "timestamp",
-              "settings": {
-                "interval": "auto",
-                "min_doc_count": 0
-              }
-            }
-          ],
-          "metrics": [
-            { "id": "2", "type": "count" }
-          ]
-        }
-      ]
-    },
+  "type": "table",
+  "title": "Log Alerts",
+  "gridPos": { "x": 0, "y": 28, "w": 24, "h": 10 },
+  "targets": [
     {
-      "type": "table",
-      "title": "Metric Alerts (Elasticsearch Histogram)",
-      "gridPos": { "x": 0, "y": 44, "w": 24, "h": 8 },
-      "targets": [
+      "refId": "F",
+      "datasource": { "type": "elasticsearch", "uid": "es_log_alerts" },
+      "timeField": "timestamp",
+      "query": "*:*",
+      "queryType": "lucene",
+      "metrics": [
         {
-          "refId": "M",
-          "datasource": { "type": "elasticsearch", "uid": "es_metric_alerts" },
-          "timeField": "timestamp",
-          "query": "*",
-          "bucketAggs": [
-            {
-              "id": "1",
-              "type": "date_histogram",
-              "field": "timestamp",
-              "settings": {
-                "interval": "auto",
-                "min_doc_count": 0
-              }
-            }
-          ],
-          "metrics": [
-            { "id": "2", "type": "count" }
-          ]
+          "type": "raw_document",
+          "id": "1"
         }
-      ]
+      ],
+      "bucketAggs": []
     }
+  ],
+  "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": { "show": false }
+  },
+  "transformations": [
+    {
+      "id": "extractFields",
+      "options": {
+        "source": "docs",
+        "keepTime": true,
+        "replace": true
+      }
+    },
+    {
+      "id": "organize",
+      "options": {
+        "excludeByName": {
+          "_id": true,
+          "_index": true,
+          "_type": true,
+          "highlight": true,
+          "sort": true
+        },
+        "indexByName": {
+          "timestamp": 0,
+          "host": 1,
+          "method": 2,
+          "url": 3,
+          "status": 4,
+          "content": 5
+        },
+        "renameByName": {
+          "timestamp": "Timestamp",
+          "host": "Host",
+          "method": "Method",
+          "url": "URL",
+          "status": "Status",
+          "content": "Content"
+        }
+      }
+    }
+  ],
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "align": "left",
+        "filterable": true
+      },
+      "thresholds": { "mode": "absolute", "steps": [] }
+    },
+    "overrides": [
+      {
+        "matcher": { "id": "byName", "options": "timestamp" },
+        "properties": [
+          { "id": "custom.width", "value": 200 },
+          { "id": "unit", "value": "dateTimeAsIso" }
+        ]
+      },
+      {
+        "matcher": { "id": "byName", "options": "status" },
+        "properties": [
+          { "id": "custom.width", "value": 100 }
+        ]
+      }
+    ]
+  }
+},
+    {
+  "type": "table",
+  "title": "Metric Alerts",
+  "gridPos": { "x": 0, "y": 44, "w": 24, "h": 10 },
+  "targets": [
+    {
+      "refId": "M",
+      "datasource": { "type": "elasticsearch", "uid": "es_metric_alerts" },
+      "timeField": "timestamp",
+      "query": "*:*",
+      "queryType": "lucene",
+      "metrics": [
+        {
+          "type": "raw_document",
+          "id": "1"
+        }
+      ],
+      "bucketAggs": []
+    }
+  ],
+  "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": { "show": false }
+  },
+  "transformations": [
+    {
+      "id": "extractFields",
+      "options": {
+        "source": "docs",
+        "keepTime": true,
+        "replace": true
+      }
+    },
+    {
+      "id": "organize",
+      "options": {
+        "excludeByName": {
+          "_id": true,
+          "_index": true,
+          "_type": true,
+          "highlight": true,
+          "sort": true
+        },
+        "indexByName": {
+          "timestamp": 0,
+          "host": 1,
+          "metric": 2,
+          "value": 3,
+          "threshold": 4,
+          "content": 5
+        },
+        "renameByName": {
+          "timestamp": "Timestamp",
+          "host": "Host",
+          "metric": "Metric",
+          "value": "Value",
+          "threshold": "Threshold",
+          "content": "Content"
+        }
+      }
+    }
+  ],
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "align": "left",
+        "filterable": true
+      },
+      "thresholds": { "mode": "absolute", "steps": [] }
+    },
+    "overrides": [
+      {
+        "matcher": { "id": "byName", "options": "timestamp" },
+        "properties": [
+          { "id": "custom.width", "value": 200 },
+          { "id": "unit", "value": "dateTimeAsIso" }
+        ]
+      },
+      {
+        "matcher": { "id": "byName", "options": "value" },
+        "properties": [
+          { "id": "custom.width", "value": 100 }
+        ]
+      },
+      {
+        "matcher": { "id": "byName", "options": "threshold" },
+        "properties": [
+          { "id": "custom.width", "value": 100 }
+        ]
+      }
+    ]
+  }
+}
   ]
 }

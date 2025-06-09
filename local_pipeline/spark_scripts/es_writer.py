@@ -1,8 +1,8 @@
 from elasticsearch import Elasticsearch, helpers
 import uuid
 
-from .schema import DailyReport
-from .my_logger import get_logger
+from schema import DailyReport
+from logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -85,6 +85,9 @@ class ESWriter:
         """Writes one flattened document per host in the daily report."""
         try:
             for host, host_data in report.host_reports.items():
+                status_count_fields = {
+                    f"status_counts_{k}": v for k, v in report.status_counts.items()
+                }
                 flat_doc = {
                     "timestamp": report.timestamp,
                     "host": host,
@@ -97,14 +100,15 @@ class ESWriter:
                     "max_cpu": host_data.max_cpu,
                     "max_mem": host_data.max_mem,
                     "max_disk": host_data.max_disk,
+                    **status_count_fields
                 }
                 doc_id = f"{report.timestamp}_{host}"
                 self.client.index(
                     index=self.index,
                     id=doc_id,
-                    document=flat_doc
+                    document=flat_doc,
                 )
-            logger.info(f"✅ Flattened daily report written to index '{self.index}'")
+            logger.info(f"Daily report written to index '{self.index}'")
         except Exception as e:
-            logger.error("❌ Failed to write flattened daily report", exc_info=True)
+            logger.error("Failed to write daily report", exc_info=True)
             raise
